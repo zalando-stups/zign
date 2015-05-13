@@ -44,7 +44,7 @@ def cli(ctx, config_file):
 
 def format_expires(token: dict):
     now = time.time()
-    remaining = token.get('creation_time') + token.get('expires_in') - now
+    remaining = token.get('creation_time', 0) + token.get('expires_in', 0) - now
     return '{}m'.format(round(remaining / 60))
 
 

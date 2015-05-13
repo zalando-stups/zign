@@ -1,3 +1,4 @@
+import json
 from click.testing import CliRunner
 from mock import MagicMock
 import yaml
@@ -16,7 +17,11 @@ def test_no_command(monkeypatch):
     runner = CliRunner()
 
     with runner.isolated_filesystem():
-        result = runner.invoke(cli, ['token', '-n', 'mytok', '--password', 'mypass', '--url', 'https://localhost/'], catch_exceptions=False)
+        result = runner.invoke(cli, ['-c', 'myconfig.yaml', 'token', '-n', 'mytok', '--password', 'mypass'], catch_exceptions=False, input='localhost\n')
 
-    assert token == result.output.strip()
+        assert token == result.output.rstrip().split('\n')[-1]
+
+        result = runner.invoke(cli, ['-c', 'myconfig.yaml', 'list', '-o', 'json'], catch_exceptions=False)
+        data = json.loads(result.output)
+        assert len(data) == 1
 
