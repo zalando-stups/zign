@@ -34,7 +34,7 @@ DESCRIPTION = 'OAuth2 token management CLI'
 LICENSE = 'Apache License 2.0'
 URL = 'https://github.com/zalando-stups/zign'
 AUTHOR = 'Henning Jacobs'
-EzignL = 'henning.jacobs@zalando.de'
+EMAIL = 'henning.jacobs@zalando.de'
 
 COVERAGE_XML = True
 COVERAGE_HTML = False
@@ -201,7 +201,7 @@ def setup_package():
         url=URL,
         description=DESCRIPTION,
         author=AUTHOR,
-        author_ezignl=EzignL,
+        author_email=EMAIL,
         license=LICENSE,
         keywords='aws account saml login federated shibboleth',
         long_description=read('README.rst'),
