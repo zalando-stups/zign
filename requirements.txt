@@ -1,0 +1,4 @@
+clickclick>=0.9
+keyring
+PyYAML
+requests
