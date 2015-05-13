@@ -55,10 +55,13 @@ def list_tokens(obj, output):
 
     rows = []
     for key, val in sorted(data.items()):
-        rows.append({'name': key, 'access_token': val.get('access_token'), 'creation_time': val.get('creation_time')})
+        rows.append({'name': key,
+                     'access_token': val.get('access_token'),
+                     'scope': val.get('scope'),
+                     'creation_time': val.get('creation_time')})
 
     with OutputFormat(output):
-        print_table('name access_token creation_time'.split(), rows)
+        print_table('name access_token scope creation_time'.split(), rows)
 
 
 @cli.command('token')
@@ -103,12 +106,19 @@ def create_token(obj, scope, url, realm, name, user, password, insecure):
     params = {'json': 'true'}
     if realm:
         params['realm'] = realm
+    if scope:
+        params['scope'] = ' '.join(scope)
     response = requests.get(url, params=params, auth=(user, password), verify=not insecure)
 
     if response.status_code == 200:
         keyring.set_password(KEYRING_KEY, user, password)
 
     result = response.json()
+
+    access_token = result.get('access_token')
+
+    if not access_token:
+        raise click.UsageError(yaml.safe_dump(result))
 
     if name:
         try:
@@ -123,7 +133,7 @@ def create_token(obj, scope, url, realm, name, user, password, insecure):
         with open(TOKENS_FILE_PATH, 'w') as fd:
             yaml.safe_dump(data, fd)
 
-    print(result.get('access_token'))
+    print(access_token)
 
 
 def main():
