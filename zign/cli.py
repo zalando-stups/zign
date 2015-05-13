@@ -55,7 +55,7 @@ def list_tokens(obj, output):
 
     rows = []
     for key, val in sorted(data.items()):
-        rows.append({'name': key, 'token': val.get('access_token'), 'creation_time': val.get('creation_time')})
+        rows.append({'name': key, 'access_token': val.get('access_token'), 'creation_time': val.get('creation_time')})
 
     with OutputFormat(output):
         print_table('name access_token creation_time'.split(), rows)
@@ -68,11 +68,14 @@ def list_tokens(obj, output):
 @click.option('-n', '--name', help='Custom token name', metavar='TOKEN_NAME')
 @click.option('-U', '--user', help='Username to use for authentication', envvar='USER', metavar='NAME')
 @click.option('-p', '--password', help='Password to use for authentication', envvar='ZIGN_PASSWORD', metavar='PWD')
+@click.option('--insecure', help='Do not verify SSL certificate', is_flag=True, default=False)
 @click.pass_obj
-def create_token(obj, scope, url, realm, name, user, password):
+def create_token(obj, scope, url, realm, name, user, password, insecure):
     '''Create a new token'''
 
     config = obj
+
+    url = url or config.get('url')
 
     while not url:
         url = click.prompt('Please enter the OAuth access token service URL')
@@ -80,8 +83,9 @@ def create_token(obj, scope, url, realm, name, user, password):
             url = 'https://{}'.format(url)
 
         try:
-            requests.get(url, timeout=5)
+            requests.get(url, timeout=5, verify=not insecure)
         except:
+            raise
             error('Could not reach {}'.format(url))
             url = None
 
@@ -99,7 +103,7 @@ def create_token(obj, scope, url, realm, name, user, password):
     params = {'json': 'true'}
     if realm:
         params['realm'] = realm
-    response = requests.get(url, params=params, auth=(user, password))
+    response = requests.get(url, params=params, auth=(user, password), verify=not insecure)
 
     if response.status_code == 200:
         keyring.set_password(KEYRING_KEY, user, password)
