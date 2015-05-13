@@ -27,7 +27,7 @@ def print_version(ctx, param, value):
     ctx.exit()
 
 
-@click.group(cls=AliasedGroup, invoke_without_command=True, context_settings=CONTEXT_SETTINGS)
+@click.group(cls=AliasedGroup, context_settings=CONTEXT_SETTINGS)
 @click.option('--config-file', '-c', help='Use alternative configuration file',
               default=CONFIG_FILE_PATH, metavar='PATH')
 @click.option('-V', '--version', is_flag=True, callback=print_version, expose_value=False, is_eager=True,
@@ -40,6 +40,12 @@ def cli(ctx, config_file):
         with open(path, 'rb') as fd:
             data = yaml.safe_load(fd)
     ctx.obj = data
+
+
+def format_expires(token: dict):
+    now = time.time()
+    remaining = token.get('creation_time') + token.get('expires_in') - now
+    return '{}m'.format(round(remaining / 60))
 
 
 @cli.command('list')
@@ -58,25 +64,43 @@ def list_tokens(obj, output):
         rows.append({'name': key,
                      'access_token': val.get('access_token'),
                      'scope': val.get('scope'),
-                     'creation_time': val.get('creation_time')})
+                     'creation_time': val.get('creation_time'),
+                     'expires_in': format_expires(val)})
 
     with OutputFormat(output):
-        print_table('name access_token scope creation_time'.split(), rows)
+        print_table('name access_token scope creation_time expires_in'.split(), rows)
 
 
-@cli.command('token')
+def is_valid(token: dict):
+    now = time.time()
+    return token and now < (token.get('creation_time', 0) + token.get('expires_in', 0))
+
+
+@cli.command()
 @click.argument('scope', nargs=-1)
 @click.option('--url', help='URL to generate access token', metavar='URI')
 @click.option('--realm', help='Use custom OAuth2 realm', metavar='NAME')
-@click.option('-n', '--name', help='Custom token name', metavar='TOKEN_NAME')
+@click.option('-n', '--name', help='Custom token name (will be stored)', metavar='TOKEN_NAME')
 @click.option('-U', '--user', help='Username to use for authentication', envvar='USER', metavar='NAME')
 @click.option('-p', '--password', help='Password to use for authentication', envvar='ZIGN_PASSWORD', metavar='PWD')
 @click.option('--insecure', help='Do not verify SSL certificate', is_flag=True, default=False)
+@click.option('-r', '--refresh', help='Force refresh of the access token', is_flag=True, default=False)
 @click.pass_obj
-def create_token(obj, scope, url, realm, name, user, password, insecure):
-    '''Create a new token'''
+def token(obj, scope, url, realm, name, user, password, insecure, refresh):
+    '''Create a new token or use an existing one'''
 
     config = obj
+
+    if name and not refresh:
+        try:
+            with open(TOKENS_FILE_PATH) as fd:
+                data = yaml.safe_load(fd)
+        except:
+            data = {}
+        existing_token = data and data.get(name)
+        if is_valid(existing_token):
+            print(existing_token.get('access_token'))
+            return
 
     url = url or config.get('url')
 
@@ -125,6 +149,9 @@ def create_token(obj, scope, url, realm, name, user, password, insecure):
             with open(TOKENS_FILE_PATH) as fd:
                 data = yaml.safe_load(fd)
         except:
+            pass
+
+        if not data:
             data = {}
 
         data[name] = result
