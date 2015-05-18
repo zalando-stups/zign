@@ -71,6 +71,26 @@ def list_tokens(obj, output):
         print_table('name access_token scope creation_time expires_in'.split(), rows)
 
 
+@cli.command('delete')
+@click.argument('name')
+@click.pass_obj
+def delete_token(obj, name):
+    '''Delete a named token'''
+    try:
+        with open(TOKENS_FILE_PATH) as fd:
+            data = yaml.safe_load(fd)
+    except:
+        data = {}
+
+    try:
+        del data[name]
+    except:
+        pass
+
+    with open(TOKENS_FILE_PATH, 'w') as fd:
+        yaml.safe_dump(data, fd)
+
+
 def is_valid(token: dict):
     now = time.time()
     return token and now < (token.get('creation_time', 0) + token.get('expires_in', 0))
