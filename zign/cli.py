@@ -1,18 +1,14 @@
-import click
 import os
-import keyring
-import requests
 import time
+
+import click
 import yaml
+from clickclick import AliasedGroup, print_table, OutputFormat
 
 import zign
+from .api import get_named_token
+from .config import CONFIG_FILE_PATH, TOKENS_FILE_PATH
 
-from clickclick import error, AliasedGroup, print_table, OutputFormat
-
-KEYRING_KEY = 'zign'
-CONFIG_DIR_PATH = click.get_app_dir('zign')
-CONFIG_FILE_PATH = os.path.join(CONFIG_DIR_PATH, 'zign.yaml')
-TOKENS_FILE_PATH = os.path.join(CONFIG_DIR_PATH, 'tokens.yaml')
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
 
@@ -91,11 +87,6 @@ def delete_token(obj, name):
         yaml.safe_dump(data, fd)
 
 
-def is_valid(token: dict):
-    now = time.time()
-    return token and now < (token.get('creation_time', 0) + token.get('expires_in', 0))
-
-
 @cli.command()
 @click.argument('scope', nargs=-1)
 @click.option('--url', help='URL to generate access token', metavar='URI')
@@ -109,76 +100,8 @@ def is_valid(token: dict):
 def token(obj, scope, url, realm, name, user, password, insecure, refresh):
     '''Create a new token or use an existing one'''
 
-    config = obj
-
-    if name and not refresh:
-        try:
-            with open(TOKENS_FILE_PATH) as fd:
-                data = yaml.safe_load(fd)
-        except:
-            data = {}
-        existing_token = data and data.get(name)
-        if is_valid(existing_token):
-            print(existing_token.get('access_token'))
-            return
-
-    url = url or config.get('url')
-
-    while not url:
-        url = click.prompt('Please enter the OAuth access token service URL')
-        if not url.startswith('http'):
-            url = 'https://{}'.format(url)
-
-        try:
-            requests.get(url, timeout=5, verify=not insecure)
-        except:
-            raise
-            error('Could not reach {}'.format(url))
-            url = None
-
-        config['url'] = url
-
-    os.makedirs(CONFIG_DIR_PATH, exist_ok=True)
-    with open(CONFIG_FILE_PATH, 'w') as fd:
-        yaml.dump(config, fd)
-
-    password = password or keyring.get_password(KEYRING_KEY, user)
-
-    if not password:
-        password = click.prompt('Password', hide_input=True)
-
-    params = {'json': 'true'}
-    if realm:
-        params['realm'] = realm
-    if scope:
-        params['scope'] = ' '.join(scope)
-    response = requests.get(url, params=params, auth=(user, password), verify=not insecure)
-
-    if response.status_code == 200:
-        keyring.set_password(KEYRING_KEY, user, password)
-
-    result = response.json()
-
-    access_token = result.get('access_token')
-
-    if not access_token:
-        raise click.UsageError(yaml.safe_dump(result))
-
-    if name:
-        try:
-            with open(TOKENS_FILE_PATH) as fd:
-                data = yaml.safe_load(fd)
-        except:
-            pass
-
-        if not data:
-            data = {}
-
-        data[name] = result
-        data[name]['creation_time'] = time.time()
-
-        with open(TOKENS_FILE_PATH, 'w') as fd:
-            yaml.safe_dump(data, fd)
+    token = get_named_token(scope, realm, name, user, password, url, insecure, refresh)
+    access_token = token.get('access_token')
 
     print(access_token)
 
