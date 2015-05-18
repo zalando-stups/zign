@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""
-AWS Account Configurator
-"""
-
 import sys
 import os
 import inspect
