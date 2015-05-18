@@ -23,5 +23,5 @@ def test_no_command(monkeypatch):
 
         result = runner.invoke(cli, ['-c', 'myconfig.yaml', 'list', '-o', 'json'], catch_exceptions=False)
         data = json.loads(result.output)
-        assert len(data) == 1
+        assert len(data) >= 1
 

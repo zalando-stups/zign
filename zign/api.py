@@ -24,8 +24,11 @@ def get_new_token(realm, scope, user, password, url=None, insecure=False):
 
 
 def get_named_token(scope, realm, name, user, password, url=None, insecure=False, refresh=False):
-    with open(CONFIG_FILE_PATH) as fd:
-        config = yaml.safe_load(fd)
+    try:
+        with open(CONFIG_FILE_PATH) as fd:
+            config = yaml.safe_load(fd)
+    except:
+        config = {}
 
     if name and not refresh:
         try:
