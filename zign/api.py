@@ -23,7 +23,7 @@ def get_new_token(realm, scope, user, password, url=None, insecure=False):
     return response.json()
 
 
-def get_named_token(scope, realm, name, user, password, url=None, insecure=False, refresh=False):
+def get_named_token(scope, realm, name, user, password, url=None, insecure=False, refresh=False, use_keyring=True):
     try:
         with open(CONFIG_FILE_PATH) as fd:
             config = yaml.safe_load(fd)
@@ -66,7 +66,7 @@ def get_named_token(scope, realm, name, user, password, url=None, insecure=False
 
     result = get_new_token(realm, scope, user, password, insecure=insecure)
 
-    if result:
+    if result and use_keyring:
         keyring.set_password(KEYRING_KEY, user, password)
 
     access_token = result.get('access_token')
