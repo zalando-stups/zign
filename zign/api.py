@@ -64,7 +64,7 @@ def get_named_token(scope, realm, name, user, password, url=None, insecure=False
     if not password:
         password = click.prompt('Password', hide_input=True)
 
-    result = get_new_token(realm, scope, user, password, insecure=insecure)
+    result = get_new_token(realm, scope, user, password, url=url, insecure=insecure)
 
     if result and use_keyring:
         keyring.set_password(KEYRING_KEY, user, password)
