@@ -86,7 +86,7 @@ def get_named_token(scope, realm, name, user, password, url=None, insecure=False
             with open(TOKENS_FILE_PATH) as fd:
                 data = yaml.safe_load(fd)
         except:
-            pass
+            data = None
 
         if not data:
             data = {}
