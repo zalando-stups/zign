@@ -23,22 +23,29 @@ def get_new_token(realm, scope, user, password, url=None, insecure=False):
     return response.json()
 
 
+def get_existing_token(name: str) -> dict:
+    '''Return existing token if it exists and if it's valid, return None otherwise'''
+    try:
+        with open(TOKENS_FILE_PATH) as fd:
+            data = yaml.safe_load(fd)
+    except:
+        data = {}
+    existing_token = data and data.get(name)
+    if is_valid(existing_token):
+        return existing_token
+
+
 def get_named_token(scope, realm, name, user, password, url=None, insecure=False, refresh=False, use_keyring=True):
+    if name and not refresh:
+        existing_token = get_existing_token(name)
+        if existing_token:
+            return existing_token
+
     try:
         with open(CONFIG_FILE_PATH) as fd:
             config = yaml.safe_load(fd)
     except:
         config = {}
-
-    if name and not refresh:
-        try:
-            with open(TOKENS_FILE_PATH) as fd:
-                data = yaml.safe_load(fd)
-        except:
-            data = {}
-        existing_token = data and data.get(name)
-        if is_valid(existing_token):
-            return existing_token
 
     url = url or config.get('url')
 
