@@ -9,11 +9,19 @@ import yaml
 from .config import KEYRING_KEY, CONFIG_DIR_PATH, CONFIG_FILE_PATH, TOKENS_FILE_PATH
 
 
+def get_config():
+    try:
+        with open(CONFIG_FILE_PATH) as fd:
+            config = yaml.safe_load(fd)
+    except:
+        pass
+    return config or {}
+
+
 def get_new_token(realm, scope, user, password, url=None, insecure=False):
     if not url:
-        with open(CONFIG_FILE_PATH) as fd:
-            data = yaml.safe_load(fd)
-        url = data.get('url')
+        config = get_config()
+        url = config.get('url')
     params = {'json': 'true'}
     if realm:
         params['realm'] = realm
@@ -41,11 +49,7 @@ def get_named_token(scope, realm, name, user, password, url=None, insecure=False
         if existing_token:
             return existing_token
 
-    try:
-        with open(CONFIG_FILE_PATH) as fd:
-            config = yaml.safe_load(fd)
-    except:
-        config = {}
+    config = get_config()
 
     url = url or config.get('url')
 
