@@ -25,3 +25,22 @@ def test_no_command(monkeypatch):
         data = json.loads(result.output)
         assert len(data) >= 1
 
+
+def test_empty_config(monkeypatch):
+    token = 'abc-123'
+
+    response = MagicMock()
+    response.json.return_value = {'access_token': token}
+
+    monkeypatch.setattr('keyring.set_password', MagicMock())
+    monkeypatch.setattr('zign.api.CONFIG_FILE_PATH', 'myconfig.yaml')
+    monkeypatch.setattr('requests.get', MagicMock(return_value=response))
+
+    runner = CliRunner()
+
+    with runner.isolated_filesystem():
+        with open('myconfig.yaml', 'w') as fd:
+            fd.write('')
+        result = runner.invoke(cli, ['token', '-n', 'mytok', '--password', 'mypass'], catch_exceptions=False, input='localhost\n')
+        assert token == result.output.rstrip().split('\n')[-1]
+

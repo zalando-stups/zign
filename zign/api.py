@@ -10,13 +10,15 @@ from .config import KEYRING_KEY, CONFIG_DIR_PATH, CONFIG_FILE_PATH, TOKENS_FILE_
 
 
 def get_config():
-    config = {}
+    config = None
     try:
         with open(CONFIG_FILE_PATH) as fd:
             config = yaml.safe_load(fd)
     except:
         pass
-    return config
+    # always return dict,
+    # even if the YAML file is empty
+    return config or {}
 
 
 def get_new_token(realm, scope, user, password, url=None, insecure=False):
