@@ -10,12 +10,13 @@ from .config import KEYRING_KEY, CONFIG_DIR_PATH, CONFIG_FILE_PATH, TOKENS_FILE_
 
 
 def get_config():
+    config = {}
     try:
         with open(CONFIG_FILE_PATH) as fd:
             config = yaml.safe_load(fd)
     except:
         pass
-    return config or {}
+    return config
 
 
 def get_new_token(realm, scope, user, password, url=None, insecure=False):
