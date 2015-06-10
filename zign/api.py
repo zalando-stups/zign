@@ -9,6 +9,19 @@ import yaml
 from .config import KEYRING_KEY, CONFIG_DIR_PATH, CONFIG_FILE_PATH, TOKENS_FILE_PATH
 
 
+class ServerError(Exception):
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return 'Server error: {}'.format(self.message)
+
+
+class AuthenticationFailed(ServerError):
+    def __str__(self):
+        return 'Authentication failed: {}'.format(self.message)
+
+
 def get_config():
     config = None
     try:
@@ -31,7 +44,18 @@ def get_new_token(realm, scope, user, password, url=None, insecure=False):
     if scope:
         params['scope'] = ' '.join(scope)
     response = requests.get(url, params=params, auth=(user, password), verify=not insecure)
-    return response.json()
+    if response.status_code == 401:
+        raise AuthenticationFailed('Token Service returned {}'.format(response.text))
+    elif response.status_code != 200:
+        raise ServerError('Token Service returned HTTP status {}: {}'.format(response.status_code, response.text))
+    try:
+        json_data = response.json()
+    except:
+        raise ServerError('Token Service returned invalid JSON data')
+
+    if not json_data.get('access_token'):
+        raise ServerError('Token Service returned invalid JSON (access_token missing)')
+    return json_data
 
 
 def get_existing_token(name: str) -> dict:
@@ -82,11 +106,6 @@ def get_named_token(scope, realm, name, user, password, url=None, insecure=False
 
     if result and use_keyring:
         keyring.set_password(KEYRING_KEY, user, password)
-
-    access_token = result.get('access_token')
-
-    if not access_token:
-        raise click.UsageError(yaml.safe_dump(result))
 
     if name:
         try:

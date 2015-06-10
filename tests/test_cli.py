@@ -9,6 +9,7 @@ def test_no_command(monkeypatch):
     token = 'abc-123'
 
     response = MagicMock()
+    response.status_code = 200
     response.json.return_value = {'access_token': token}
 
     monkeypatch.setattr('keyring.set_password', MagicMock())
@@ -30,6 +31,7 @@ def test_empty_config(monkeypatch):
     token = 'abc-123'
 
     response = MagicMock()
+    response.status_code = 200
     response.json.return_value = {'access_token': token}
 
     monkeypatch.setattr('keyring.set_password', MagicMock())
