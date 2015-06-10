@@ -46,3 +46,49 @@ def test_empty_config(monkeypatch):
         result = runner.invoke(cli, ['token', '-n', 'mytok', '--password', 'mypass'], catch_exceptions=False, input='localhost\n')
         assert token == result.output.rstrip().split('\n')[-1]
 
+
+def test_auth_failure(monkeypatch):
+    token = 'abc-123'
+
+    def get(url, auth, **kwargs):
+        response = MagicMock()
+        if auth[1] == 'correctpass':
+            response.status_code = 200
+            response.json.return_value = {'access_token': token}
+        else:
+            response.status_code = 401
+        return response
+
+    monkeypatch.setattr('keyring.set_password', MagicMock())
+    monkeypatch.setattr('zign.api.CONFIG_FILE_PATH', 'myconfig.yaml')
+    monkeypatch.setattr('requests.get', get)
+
+    runner = CliRunner()
+
+    with runner.isolated_filesystem():
+        with open('myconfig.yaml', 'w') as fd:
+            yaml.safe_dump({'url': 'http://localhost'}, fd)
+        result = runner.invoke(cli, ['token', '-n', 'mytok', '-U', 'myusr', '--password', 'mypass'], catch_exceptions=False, input='wrongpw\ncorrectpass\n')
+        assert 'Authentication failed: Token Service returned ' in result.output
+        assert 'Please check your username and password and try again.' in result.output
+        assert 'Password for myusr: ' in result.output
+        assert token == result.output.rstrip().split('\n')[-1]
+
+
+def test_server_error(monkeypatch):
+    def get(url, **kwargs):
+        response = MagicMock()
+        response.status_code = 503
+        return response
+
+    monkeypatch.setattr('keyring.set_password', MagicMock())
+    monkeypatch.setattr('zign.api.CONFIG_FILE_PATH', 'myconfig.yaml')
+    monkeypatch.setattr('requests.get', get)
+
+    runner = CliRunner()
+
+    with runner.isolated_filesystem():
+        with open('myconfig.yaml', 'w') as fd:
+            yaml.safe_dump({'url': 'http://localhost'}, fd)
+        result = runner.invoke(cli, ['token', '-n', 'mytok', '-U', 'myusr', '--password', 'mypass'], catch_exceptions=False)
+        assert 'Server error: Token Service returned HTTP status 503' in result.output

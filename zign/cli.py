@@ -6,7 +6,7 @@ import yaml
 from clickclick import AliasedGroup, print_table, OutputFormat
 
 import zign
-from .api import get_named_token
+from .api import get_named_token, get_tokens, ServerError
 from .config import CONFIG_FILE_PATH, TOKENS_FILE_PATH
 
 
@@ -49,11 +49,7 @@ def format_expires(token: dict):
 @click.pass_obj
 def list_tokens(obj, output):
     '''List tokens'''
-    try:
-        with open(TOKENS_FILE_PATH) as fd:
-            data = yaml.safe_load(fd)
-    except:
-        data = {}
+    data = get_tokens()
 
     rows = []
     for key, val in sorted(data.items()):
@@ -72,11 +68,7 @@ def list_tokens(obj, output):
 @click.pass_obj
 def delete_token(obj, name):
     '''Delete a named token'''
-    try:
-        with open(TOKENS_FILE_PATH) as fd:
-            data = yaml.safe_load(fd)
-    except:
-        data = {}
+    data = get_tokens()
 
     try:
         del data[name]
@@ -100,7 +92,10 @@ def delete_token(obj, name):
 def token(obj, scope, url, realm, name, user, password, insecure, refresh):
     '''Create a new token or use an existing one'''
 
-    token = get_named_token(scope, realm, name, user, password, url, insecure, refresh)
+    try:
+        token = get_named_token(scope, realm, name, user, password, url, insecure, refresh, prompt=True)
+    except ServerError as e:
+        raise click.UsageError(e)
     access_token = token.get('access_token')
 
     print(access_token)

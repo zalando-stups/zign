@@ -1,5 +1,5 @@
 import click
-from clickclick import error
+from clickclick import error, info
 import keyring
 import os
 import time
@@ -75,7 +75,10 @@ def get_existing_token(name: str) -> dict:
         return existing_token
 
 
-def get_named_token(scope, realm, name, user, password, url=None, insecure=False, refresh=False, use_keyring=True):
+def get_named_token(scope, realm, name, user, password, url=None,
+                    insecure=False, refresh=False, use_keyring=True, prompt=False):
+    '''get named access token, return existing if still valid'''
+
     if name and not refresh:
         existing_token = get_existing_token(name)
         if existing_token:
@@ -85,7 +88,7 @@ def get_named_token(scope, realm, name, user, password, url=None, insecure=False
 
     url = url or config.get('url')
 
-    while not url:
+    while not url and prompt:
         url = click.prompt('Please enter the OAuth access token service URL')
         if not url.startswith('http'):
             url = 'https://{}'.format(url)
@@ -104,10 +107,20 @@ def get_named_token(scope, realm, name, user, password, url=None, insecure=False
 
     password = password or keyring.get_password(KEYRING_KEY, user)
 
-    if not password:
-        password = click.prompt('Password', hide_input=True)
+    while True:
+        if not password and prompt:
+            password = click.prompt('Password for {}'.format(user), hide_input=True)
 
-    result = get_new_token(realm, scope, user, password, url=url, insecure=insecure)
+        try:
+            result = get_new_token(realm, scope, user, password, url=url, insecure=insecure)
+            break
+        except AuthenticationFailed as e:
+            if prompt:
+                error(e)
+                info('Please check your username and password and try again.')
+                password = None
+            else:
+                raise
 
     if result and use_keyring:
         keyring.set_password(KEYRING_KEY, user, password)

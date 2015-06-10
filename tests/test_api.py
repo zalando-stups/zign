@@ -7,7 +7,7 @@ def test_get_new_token_auth_fail(monkeypatch):
     response = MagicMock(status_code=401)
     monkeypatch.setattr('requests.get', MagicMock(return_value=response))
     with pytest.raises(zign.api.AuthenticationFailed) as excinfo:
-        zign.api.get_new_token('myrealm', ['myscope'], 'myuser', 'mypass', 'http://example.org')
+        zign.api.get_named_token('myrealm', ['myscope'], 'myuser', 'mypass', 'http://example.org')
 
     assert 'Authentication failed: Token Service' in str(excinfo)
 
