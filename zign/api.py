@@ -34,6 +34,15 @@ def get_config():
     return config or {}
 
 
+def get_tokens():
+    try:
+        with open(TOKENS_FILE_PATH) as fd:
+            data = yaml.safe_load(fd)
+    except:
+        data = None
+    return data or {}
+
+
 def get_new_token(realm, scope, user, password, url=None, insecure=False):
     if not url:
         config = get_config()
@@ -60,12 +69,8 @@ def get_new_token(realm, scope, user, password, url=None, insecure=False):
 
 def get_existing_token(name: str) -> dict:
     '''Return existing token if it exists and if it's valid, return None otherwise'''
-    try:
-        with open(TOKENS_FILE_PATH) as fd:
-            data = yaml.safe_load(fd)
-    except:
-        data = {}
-    existing_token = data and data.get(name)
+    data = get_tokens()
+    existing_token = data.get(name)
     if is_valid(existing_token):
         return existing_token
 
@@ -108,14 +113,7 @@ def get_named_token(scope, realm, name, user, password, url=None, insecure=False
         keyring.set_password(KEYRING_KEY, user, password)
 
     if name:
-        try:
-            with open(TOKENS_FILE_PATH) as fd:
-                data = yaml.safe_load(fd)
-        except:
-            data = None
-
-        if not data:
-            data = {}
+        data = get_tokens()
 
         data[name] = result
         data[name]['creation_time'] = time.time()
