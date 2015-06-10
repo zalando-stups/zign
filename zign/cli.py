@@ -60,7 +60,8 @@ def list_tokens(obj, output):
                      'expires_in': format_expires(val)})
 
     with OutputFormat(output):
-        print_table('name access_token scope creation_time expires_in'.split(), rows)
+        print_table('name access_token scope creation_time expires_in'.split(), rows,
+                    titles={'creation_time': 'Created'})
 
 
 @cli.command('delete')
