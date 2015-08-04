@@ -85,13 +85,15 @@ def delete_token(obj, name):
 @click.option('--url', help='URL to generate access token', metavar='URI')
 @click.option('--realm', help='Use custom OAuth2 realm', metavar='NAME')
 @click.option('-n', '--name', help='Custom token name (will be stored)', metavar='TOKEN_NAME')
-@click.option('-U', '--user', help='Username to use for authentication', envvar='USER', metavar='NAME')
+@click.option('-U', '--user', help='Username to use for authentication', envvar='ZIGN_USER', metavar='NAME')
 @click.option('-p', '--password', help='Password to use for authentication', envvar='ZIGN_PASSWORD', metavar='PWD')
 @click.option('--insecure', help='Do not verify SSL certificate', is_flag=True, default=False)
 @click.option('-r', '--refresh', help='Force refresh of the access token', is_flag=True, default=False)
 @click.pass_obj
 def token(obj, scope, url, realm, name, user, password, insecure, refresh):
     '''Create a new token or use an existing one'''
+
+    user = user or os.getenv('USER')
 
     try:
         token = get_named_token(scope, realm, name, user, password, url, insecure, refresh, prompt=True)
