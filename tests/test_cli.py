@@ -1,6 +1,6 @@
 import json
 from click.testing import CliRunner
-from mock import MagicMock
+from unittest.mock import MagicMock
 import yaml
 from zign.cli import cli
 
