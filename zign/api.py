@@ -3,6 +3,7 @@ from clickclick import error, info
 import keyring
 import os
 import time
+import tokens
 import requests
 import yaml
 
@@ -140,3 +141,20 @@ def get_named_token(scope, realm, name, user, password, url=None,
 def is_valid(token: dict):
     now = time.time()
     return token and now < (token.get('creation_time', 0) + token.get('expires_in', 0))
+
+
+def get_token(name: str, scopes: list):
+    '''Get an OAuth token, either from Token Service
+    or directly from OAuth provider (using the Python tokens library)'''
+
+    # first try if a token exists already
+    token = get_existing_token(name)
+
+    if token:
+        return token['access_token']
+
+    tokens.manage(name, scopes)
+    access_token = tokens.get(name)
+
+    if access_token:
+        return access_token
