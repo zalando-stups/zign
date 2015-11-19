@@ -77,6 +77,16 @@ def get_existing_token(name: str) -> dict:
         return existing_token
 
 
+def store_token(name: str, result: dict):
+    data = get_tokens()
+
+    data[name] = result
+    data[name]['creation_time'] = time.time()
+
+    with open(TOKENS_FILE_PATH, 'w') as fd:
+        yaml.safe_dump(data, fd)
+
+
 def get_named_token(scope, realm, name, user, password, url=None,
                     insecure=False, refresh=False, use_keyring=True, prompt=False):
     '''get named access token, return existing if still valid'''
@@ -126,13 +136,7 @@ def get_named_token(scope, realm, name, user, password, url=None,
         keyring.set_password(KEYRING_KEY, user, password)
 
     if name:
-        data = get_tokens()
-
-        data[name] = result
-        data[name]['creation_time'] = time.time()
-
-        with open(TOKENS_FILE_PATH, 'w') as fd:
-            yaml.safe_dump(data, fd)
+        store_token(name, result)
 
     return result
 
@@ -178,4 +182,5 @@ def get_token(name: str, scopes: list):
     token = get_new_token(config.get('realm'), scopes, user, password,
                           url=config.get('url'), insecure=config.get('insecure'))
     if token:
+        store_token(name, token)
         return token['access_token']
