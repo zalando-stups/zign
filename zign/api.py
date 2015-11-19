@@ -23,6 +23,14 @@ class AuthenticationFailed(ServerError):
         return 'Authentication failed: {}'.format(self.message)
 
 
+class ConfigurationError(Exception):
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return 'Configuration error: {}'.format(self.msg)
+
+
 def get_config():
     config = None
     try:
@@ -44,7 +52,7 @@ def get_tokens():
     return data or {}
 
 
-def get_new_token(realm, scope, user, password, url=None, insecure=False):
+def get_new_token(realm: str, scope: list, user, password, url=None, insecure=False):
     if not url:
         config = get_config()
         url = config.get('url')
@@ -154,7 +162,29 @@ def get_token(name: str, scopes: list):
         return token['access_token']
 
     tokens.manage(name, scopes)
-    access_token = tokens.get(name)
+    try:
+        access_token = tokens.get(name)
+    except tokens.ConfigurationError:
+        access_token = None
+    except tokens.InvalidCredentialsError:
+        access_token = None
 
     if access_token:
         return access_token
+
+    config = get_config()
+    user = config.get('user') or os.getenv('ZIGN_USER') or os.getenv('USER')
+
+    if not user:
+        raise ConfigurationError('Missing OAuth username. ' +
+                                 'Either set "user" in configuration file or ZIGN_USER environment variable.')
+
+    if not config.get('url'):
+        raise ConfigurationError('Missing OAuth access token service URL. ' +
+                                 'Please set "url" in configuration file.')
+
+    password = os.getenv('ZIGN_PASSWORD') or keyring.get_password(KEYRING_KEY, user)
+    token = get_new_token(config.get('realm'), scopes, user, password,
+                          url=config.get('url'), insecure=config.get('insecure'))
+    if token:
+        return token['access_token']
