@@ -1,4 +1,5 @@
 import pytest
+import tokens
 import zign.api
 
 from unittest.mock import MagicMock
@@ -35,3 +36,33 @@ def test_get_new_token_missing_access_token(monkeypatch):
     monkeypatch.setattr('requests.get', MagicMock(return_value=response))
     with pytest.raises(zign.api.ServerError):
         zign.api.get_new_token('myrealm', ['myscope'], 'myuser', 'mypass', 'http://example.org')
+
+
+def test_get_token_existing(monkeypatch):
+    monkeypatch.setattr('zign.api.get_existing_token', lambda x: {'access_token': 'tt77'})
+    assert zign.api.get_token('mytok', ['myscope']) == 'tt77'
+
+
+def test_get_token_configuration_error(monkeypatch):
+    def get_token(name):
+        raise tokens.ConfigurationError('TEST')
+
+    monkeypatch.setattr('tokens.get', get_token)
+    monkeypatch.setattr('stups_cli.config.load_config', lambda x: {})
+
+    with pytest.raises(zign.api.ConfigurationError):
+        zign.api.get_token('mytok', ['myscope'])
+
+
+def test_get_token_service_success(monkeypatch):
+    monkeypatch.setattr('tokens.get', lambda x: 'svc123')
+
+    assert zign.api.get_token('mytok', ['myscope']) == 'svc123'
+
+
+def test_get_token_fallback_success(monkeypatch):
+    monkeypatch.setattr('stups_cli.config.load_config', lambda x: {'url': 'http://localhost'})
+    monkeypatch.setattr('os.getenv', lambda x: 'mypass')
+    monkeypatch.setattr('zign.api.get_new_token', lambda *args, **kwargs: {'access_token': 'tt77'})
+
+    assert zign.api.get_token('mytok', ['myscope']) == 'tt77'
