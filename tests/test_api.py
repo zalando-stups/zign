@@ -61,6 +61,10 @@ def test_get_token_service_success(monkeypatch):
 
 
 def test_get_token_fallback_success(monkeypatch):
+    def get_token(name):
+        raise tokens.ConfigurationError('TEST')
+
+    monkeypatch.setattr('tokens.get', get_token)
     monkeypatch.setattr('stups_cli.config.load_config', lambda x: {'url': 'http://localhost'})
     monkeypatch.setattr('os.getenv', lambda x: 'mypass')
     monkeypatch.setattr('zign.api.get_new_token', lambda *args, **kwargs: {'access_token': 'tt77'})
