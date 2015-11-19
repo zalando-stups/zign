@@ -6,8 +6,9 @@ import yaml
 from clickclick import AliasedGroup, print_table, OutputFormat
 
 import zign
+import stups_cli.config
 from .api import get_named_token, get_tokens, ServerError
-from .config import CONFIG_FILE_PATH, TOKENS_FILE_PATH
+from .config import TOKENS_FILE_PATH
 
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -24,18 +25,11 @@ def print_version(ctx, param, value):
 
 
 @click.group(cls=AliasedGroup, context_settings=CONTEXT_SETTINGS)
-@click.option('--config-file', '-c', help='Use alternative configuration file',
-              default=CONFIG_FILE_PATH, metavar='PATH')
 @click.option('-V', '--version', is_flag=True, callback=print_version, expose_value=False, is_eager=True,
               help='Print the current version number and exit.')
 @click.pass_context
-def cli(ctx, config_file):
-    path = os.path.expanduser(config_file)
-    data = {}
-    if os.path.exists(path):
-        with open(path, 'rb') as fd:
-            data = yaml.safe_load(fd)
-    ctx.obj = data
+def cli(ctx):
+    ctx.obj = stups_cli.config.load_config('zign')
 
 
 def format_expires(token: dict):

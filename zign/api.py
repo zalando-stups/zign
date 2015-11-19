@@ -2,12 +2,13 @@ import click
 from clickclick import error, info
 import keyring
 import os
+import stups_cli.config
 import time
 import tokens
 import requests
 import yaml
 
-from .config import KEYRING_KEY, CONFIG_DIR_PATH, CONFIG_FILE_PATH, TOKENS_FILE_PATH
+from .config import KEYRING_KEY, TOKENS_FILE_PATH
 
 
 class ServerError(Exception):
@@ -32,15 +33,7 @@ class ConfigurationError(Exception):
 
 
 def get_config():
-    config = None
-    try:
-        with open(CONFIG_FILE_PATH) as fd:
-            config = yaml.safe_load(fd)
-    except:
-        pass
-    # always return dict,
-    # even if the YAML file is empty
-    return config or {}
+    return stups_cli.config.load_config('zign')
 
 
 def get_tokens():
@@ -110,9 +103,7 @@ def get_named_token(scope, realm, name, user, password, url=None,
 
         config['url'] = url
 
-    os.makedirs(CONFIG_DIR_PATH, exist_ok=True)
-    with open(CONFIG_FILE_PATH, 'w') as fd:
-        yaml.dump(config, fd)
+    stups_cli.config.store_config(config, 'zign')
 
     password = password or keyring.get_password(KEYRING_KEY, user)
 

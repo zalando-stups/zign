@@ -3,3 +3,4 @@ keyring
 PyYAML
 requests
 stups-tokens
+stups-cli-support

@@ -18,11 +18,11 @@ def test_no_command(monkeypatch):
     runner = CliRunner()
 
     with runner.isolated_filesystem():
-        result = runner.invoke(cli, ['-c', 'myconfig.yaml', 'token', '-n', 'mytok', '--password', 'mypass'], catch_exceptions=False, input='localhost\n')
+        result = runner.invoke(cli, ['token', '-n', 'mytok', '--password', 'mypass'], catch_exceptions=False, input='localhost\n')
 
         assert token == result.output.rstrip().split('\n')[-1]
 
-        result = runner.invoke(cli, ['-c', 'myconfig.yaml', 'list', '-o', 'json'], catch_exceptions=False)
+        result = runner.invoke(cli, ['list', '-o', 'json'], catch_exceptions=False)
         data = json.loads(result.output)
         assert len(data) >= 1
 
@@ -35,14 +35,13 @@ def test_empty_config(monkeypatch):
     response.json.return_value = {'access_token': token}
 
     monkeypatch.setattr('keyring.set_password', MagicMock())
-    monkeypatch.setattr('zign.api.CONFIG_FILE_PATH', 'myconfig.yaml')
+    monkeypatch.setattr('stups_cli.config.load_config', lambda x: {})
+    monkeypatch.setattr('stups_cli.config.store_config', lambda x, y: None)
     monkeypatch.setattr('requests.get', MagicMock(return_value=response))
 
     runner = CliRunner()
 
     with runner.isolated_filesystem():
-        with open('myconfig.yaml', 'w') as fd:
-            fd.write('')
         result = runner.invoke(cli, ['token', '-n', 'mytok', '--password', 'mypass'], catch_exceptions=False, input='localhost\n')
         assert token == result.output.rstrip().split('\n')[-1]
 
@@ -60,14 +59,13 @@ def test_auth_failure(monkeypatch):
         return response
 
     monkeypatch.setattr('keyring.set_password', MagicMock())
-    monkeypatch.setattr('zign.api.CONFIG_FILE_PATH', 'myconfig.yaml')
+    monkeypatch.setattr('stups_cli.config.load_config', lambda x: {'url': 'http://localhost'})
+    monkeypatch.setattr('stups_cli.config.store_config', lambda x, y: None)
     monkeypatch.setattr('requests.get', get)
 
     runner = CliRunner()
 
     with runner.isolated_filesystem():
-        with open('myconfig.yaml', 'w') as fd:
-            yaml.safe_dump({'url': 'http://localhost'}, fd)
         result = runner.invoke(cli, ['token', '-n', 'mytok', '-U', 'myusr', '--password', 'mypass'], catch_exceptions=False, input='wrongpw\ncorrectpass\n')
         assert 'Authentication failed: Token Service returned ' in result.output
         assert 'Please check your username and password and try again.' in result.output
@@ -82,13 +80,12 @@ def test_server_error(monkeypatch):
         return response
 
     monkeypatch.setattr('keyring.set_password', MagicMock())
-    monkeypatch.setattr('zign.api.CONFIG_FILE_PATH', 'myconfig.yaml')
+    monkeypatch.setattr('stups_cli.config.load_config', lambda x: {'url': 'http://localhost'})
+    monkeypatch.setattr('stups_cli.config.store_config', lambda x, y: None)
     monkeypatch.setattr('requests.get', get)
 
     runner = CliRunner()
 
     with runner.isolated_filesystem():
-        with open('myconfig.yaml', 'w') as fd:
-            yaml.safe_dump({'url': 'http://localhost'}, fd)
         result = runner.invoke(cli, ['token', '-n', 'mytok', '-U', 'myusr', '--password', 'mypass'], catch_exceptions=False)
         assert 'Server error: Token Service returned HTTP status 503' in result.output
