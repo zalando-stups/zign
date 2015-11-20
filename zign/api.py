@@ -83,6 +83,10 @@ def store_token(name: str, result: dict):
     data[name] = result
     data[name]['creation_time'] = time.time()
 
+    dir_path = os.path.dirname(TOKENS_FILE_PATH)
+    if dir_path:
+        os.makedirs(dir_path, exist_ok=True)
+
     with open(TOKENS_FILE_PATH, 'w') as fd:
         yaml.safe_dump(data, fd)
 
