@@ -126,7 +126,7 @@ def get_named_token(scope, realm, name, user, password, url=None,
             break
         except AuthenticationFailed as e:
             if prompt:
-                error(e)
+                error(str(e))
                 info('Please check your username and password and try again.')
                 password = None
             else:
