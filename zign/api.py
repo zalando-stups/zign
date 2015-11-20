@@ -146,6 +146,11 @@ def is_valid(token: dict):
     return token and now < (token.get('creation_time', 0) + token.get('expires_in', 0))
 
 
+def is_user_scope(scope: str):
+    '''Is the given scope supported for users (employees) in Token Service?'''
+    return scope in set(['uid', 'cn'])
+
+
 def get_token(name: str, scopes: list):
     '''Get an OAuth token, either from Token Service
     or directly from OAuth provider (using the Python tokens library)'''
@@ -179,7 +184,7 @@ def get_token(name: str, scopes: list):
                                  'Please set "url" in configuration file.')
 
     password = os.getenv('ZIGN_PASSWORD') or keyring.get_password(KEYRING_KEY, user)
-    token = get_new_token(config.get('realm'), scopes, user, password,
+    token = get_new_token(config.get('realm'), filter(is_user_scope, scopes), user, password,
                           url=config.get('url'), insecure=config.get('insecure'))
     if token:
         store_token(name, token)
