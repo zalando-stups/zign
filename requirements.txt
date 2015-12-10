@@ -1,4 +1,4 @@
-clickclick>=0.9
+clickclick>=1.0
 keyring
 PyYAML
 requests

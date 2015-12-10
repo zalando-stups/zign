@@ -1,5 +1,5 @@
 import click
-from clickclick import error, info
+from clickclick import error, info, UrlType
 import keyring
 import os
 import stups_cli.config
@@ -105,9 +105,7 @@ def get_named_token(scope, realm, name, user, password, url=None,
     url = url or config.get('url')
 
     while not url and prompt:
-        url = click.prompt('Please enter the OAuth access token service URL')
-        if not url.startswith('http'):
-            url = 'https://{}'.format(url)
+        url = click.prompt('Please enter the OAuth access token service URL', type=UrlType())
 
         try:
             requests.get(url, timeout=5, verify=not insecure)
