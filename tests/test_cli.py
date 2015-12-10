@@ -14,6 +14,7 @@ def test_no_command(monkeypatch):
 
     monkeypatch.setattr('keyring.set_password', MagicMock())
     monkeypatch.setattr('requests.get', MagicMock(return_value=response))
+    monkeypatch.setattr('stups_cli.config.store_config', MagicMock())
 
     runner = CliRunner()
 

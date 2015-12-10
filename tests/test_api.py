@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 def test_get_new_token_auth_fail(monkeypatch):
     response = MagicMock(status_code=401)
     monkeypatch.setattr('requests.get', MagicMock(return_value=response))
+    monkeypatch.setattr('stups_cli.config.store_config', lambda x, y: None)
     with pytest.raises(zign.api.AuthenticationFailed) as excinfo:
         zign.api.get_named_token('myrealm', ['myscope'], 'myuser', 'mypass', 'http://example.org')
 
