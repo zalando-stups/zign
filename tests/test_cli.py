@@ -90,3 +90,29 @@ def test_server_error(monkeypatch):
     with runner.isolated_filesystem():
         result = runner.invoke(cli, ['token', '-n', 'mytok', '-U', 'myusr', '--password', 'mypass'], catch_exceptions=False)
         assert 'Server error: Token Service returned HTTP status 503' in result.output
+
+
+def test_user_config(monkeypatch):
+    token = 'abc-123'
+
+    response = MagicMock()
+    response.status_code = 200
+    response.json.return_value = {'access_token': token}
+
+    def get_token(url, auth, **kwargs):
+        assert url == 'https://localhost/access_token'
+        user, passwd = auth
+        assert user == 'jdoe'
+        return response
+
+
+    monkeypatch.setattr('keyring.set_password', MagicMock())
+    monkeypatch.setattr('stups_cli.config.load_config', lambda x: {'user': 'jdoe', 'url': 'https://localhost/access_token'})
+    monkeypatch.setattr('stups_cli.config.store_config', lambda x, y: None)
+    monkeypatch.setattr('requests.get', get_token)
+
+    runner = CliRunner()
+
+    with runner.isolated_filesystem():
+        result = runner.invoke(cli, ['token', '-n', 'mytok', '--password', 'mypass'], catch_exceptions=False)
+        assert token == result.output.rstrip().split('\n')[-1]
