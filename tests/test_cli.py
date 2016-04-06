@@ -1,11 +1,10 @@
 import json
 from click.testing import CliRunner
 from unittest.mock import MagicMock
-import yaml
 from zign.cli import cli
 
 
-def test_no_command(monkeypatch):
+def test_create_list_delete(monkeypatch):
     token = 'abc-123'
 
     response = MagicMock()
@@ -26,6 +25,15 @@ def test_no_command(monkeypatch):
         result = runner.invoke(cli, ['list', '-o', 'json'], catch_exceptions=False)
         data = json.loads(result.output)
         assert len(data) >= 1
+        assert 'mytok' in [r['name'] for r in data]
+
+        result = runner.invoke(cli, ['delete', 'mytok'], catch_exceptions=False)
+        result = runner.invoke(cli, ['list', '-o', 'json'], catch_exceptions=False)
+        data = json.loads(result.output)
+        assert 'mytok' not in [r['name'] for r in data]
+
+        # should work again for already deleted tokens
+        result = runner.invoke(cli, ['delete', 'mytok'], catch_exceptions=False)
 
 
 def test_empty_config(monkeypatch):

@@ -4,6 +4,7 @@ import zign.api
 
 from unittest.mock import MagicMock
 
+
 def test_get_new_token_auth_fail(monkeypatch):
     response = MagicMock(status_code=401)
     monkeypatch.setattr('requests.get', MagicMock(return_value=response))
