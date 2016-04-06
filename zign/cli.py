@@ -87,7 +87,7 @@ def delete_token(obj, name):
 def token(obj, scope, url, realm, name, user, password, insecure, refresh):
     '''Create a new token or use an existing one'''
 
-    user = user or os.getenv('USER')
+    user = user or obj.get('user') or os.getenv('USER')
 
     try:
         token = get_named_token(scope, realm, name, user, password, url, insecure, refresh, prompt=True)
