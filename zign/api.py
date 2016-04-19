@@ -100,6 +100,11 @@ def get_named_token(scope, realm, name, user, password, url=None,
         if existing_token:
             return existing_token
 
+    if name and not realm:
+        access_token = get_service_token(name, scope)
+        if access_token:
+            return {'access_token': access_token}
+
     config = get_config()
 
     url = url or config.get('url')
@@ -153,6 +158,21 @@ def is_user_scope(scope: str):
     return scope in set(['uid', 'cn'])
 
 
+def get_service_token(name: str, scopes: list):
+    '''Get service token (tokens lib) if possible, otherwise return None'''
+    tokens.manage(name, scopes)
+    try:
+        access_token = tokens.get(name)
+    except tokens.ConfigurationError:
+        # will be thrown if configuration is missing (e.g. OAUTH2_ACCESS_TOKEN_URL)
+        access_token = None
+    except tokens.InvalidCredentialsError:
+        # will be thrown if $CREDENTIALS_DIR/*.json cannot be read
+        access_token = None
+
+    return access_token
+
+
 def get_token(name: str, scopes: list):
     '''Get an OAuth token, either from Token Service
     or directly from OAuth provider (using the Python tokens library)'''
@@ -163,14 +183,7 @@ def get_token(name: str, scopes: list):
     if token:
         return token['access_token']
 
-    tokens.manage(name, scopes)
-    try:
-        access_token = tokens.get(name)
-    except tokens.ConfigurationError:
-        access_token = None
-    except tokens.InvalidCredentialsError:
-        access_token = None
-
+    access_token = get_service_token(name, scopes)
     if access_token:
         return access_token
 
