@@ -53,7 +53,7 @@ def get_new_token(realm: str, scope: list, user, password, url=None, insecure=Fa
     if realm:
         params['realm'] = realm
     if scope:
-        params['scope'] = ' '.join(scope)
+        params['scope'] = ' '.join(filter(is_user_scope, scope))
     response = requests.get(url, params=params, auth=(user, password), verify=not insecure)
     if response.status_code == 401:
         raise AuthenticationFailed('Token Service returned {}'.format(response.text))
@@ -199,7 +199,7 @@ def get_token(name: str, scopes: list):
                                  'Please set "url" in configuration file.')
 
     password = os.getenv('ZIGN_PASSWORD') or keyring.get_password(KEYRING_KEY, user)
-    token = get_new_token(config.get('realm'), filter(is_user_scope, scopes), user, password,
+    token = get_new_token(config.get('realm'), scopes, user, password,
                           url=config.get('url'), insecure=config.get('insecure'))
     if token:
         store_token(name, token)
