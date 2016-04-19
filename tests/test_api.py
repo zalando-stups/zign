@@ -1,4 +1,5 @@
 import pytest
+import time
 import tokens
 import zign.api
 
@@ -72,3 +73,18 @@ def test_get_token_fallback_success(monkeypatch):
     monkeypatch.setattr('zign.api.get_new_token', lambda *args, **kwargs: {'access_token': 'tt77'})
 
     assert zign.api.get_token('mytok', ['myscope']) == 'tt77'
+
+
+def test_get_named_token_existing(monkeypatch):
+    existing = {'mytok': {'access_token': 'tt77', 'creation_time': time.time() - 10, 'expires_in': 3600}}
+    monkeypatch.setattr('zign.api.get_tokens', lambda: existing)
+    tok = zign.api.get_named_token(scope=['myscope'], realm=None, name='mytok', user='myusr', password='mypw')
+    assert tok['access_token'] == 'tt77'
+
+
+def test_get_named_token_services(monkeypatch):
+    response = MagicMock(status_code=401)
+    monkeypatch.setattr('requests.get', MagicMock(return_value=response))
+    monkeypatch.setattr('tokens.get', lambda x: 'svcmytok123')
+    tok = zign.api.get_named_token(scope=['myscope'], realm=None, name='mytok', user='myusr', password='mypw')
+    assert tok['access_token'] == 'svcmytok123'
