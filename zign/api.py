@@ -10,6 +10,8 @@ import yaml
 
 from .config import KEYRING_KEY, TOKENS_FILE_PATH
 
+TOKEN_MINIMUM_VALIDITY_SECONDS = 60*5  # 5 minutes
+
 
 class ServerError(Exception):
     def __init__(self, message):
@@ -150,7 +152,7 @@ def get_named_token(scope, realm, name, user, password, url=None,
 
 def is_valid(token: dict):
     now = time.time()
-    return token and now < (token.get('creation_time', 0) + token.get('expires_in', 0))
+    return token and now < (token.get('creation_time', 0) + token.get('expires_in', 0) - TOKEN_MINIMUM_VALIDITY_SECONDS)
 
 
 def is_user_scope(scope: str):

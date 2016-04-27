@@ -6,6 +6,15 @@ import zign.api
 from unittest.mock import MagicMock
 
 
+def test_is_valid():
+    now = time.time()
+    assert not zign.api.is_valid({})
+    assert not zign.api.is_valid({'creation_time': now - 3610, 'expires_in': 3600})
+    assert zign.api.is_valid({'creation_time': now - 100, 'expires_in': 600})
+    # still valid for 2 minutes, but we only return tokens valid for at least 5 more minutes
+    assert not zign.api.is_valid({'creation_time': now - 3480, 'expires_in': 3600})
+
+
 def test_get_new_token_auth_fail(monkeypatch):
     response = MagicMock(status_code=401)
     monkeypatch.setattr('requests.get', MagicMock(return_value=response))
