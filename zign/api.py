@@ -6,10 +6,13 @@ import stups_cli.config
 import time
 import tokens
 import requests
+import socket
 import webbrowser
 import yaml
 
 from .config import KEYRING_KEY, TOKENS_FILE_PATH
+from oauth2client import client
+from oauth2client import tools
 
 TOKEN_MINIMUM_VALIDITY_SECONDS = 60*5  # 5 minutes
 
@@ -122,12 +125,20 @@ def get_named_token(scope, realm, name, user, password, url=None,
             url = None
 
         config['url'] = url
-
     stups_cli.config.store_config(config, 'zign')
 
-    print(url, scope, realm, name, user, password, url, insecure, refresh, use_keyring, prompt)
+    success = False
+    port_number = auth_host_port_start
+
+    while True:
+        try:
+            httpd = tools.ClientRedirectServer(('localhost', '8085'), None)
+        except socket.error as e:
+
+
     webbrowser.open(config['url'], new=1, autoraise=True)
     click.echo('Your browser has been opened to visit:\n\n\t{}'.format(config['url']))
+
     password = password or keyring.get_password(KEYRING_KEY, user)
 
     while True:
