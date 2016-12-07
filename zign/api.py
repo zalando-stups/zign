@@ -128,16 +128,24 @@ def get_named_token(scope, realm, name, user, password, url=None,
     stups_cli.config.store_config(config, 'zign')
 
     success = False
-    port_number = auth_host_port_start
+    port_number = 8085
+    max_port_number = port_number + 100
 
     while True:
         try:
-            httpd = tools.ClientRedirectServer(('localhost', '8085'), None)
+            httpd = tools.ClientRedirectServer(('localhost', port_number), None)
         except socket.error as e:
+            if port_number > max_port_number:
+                success = False
+                break
+            port_number += 1
+        else:
+            success = True
+            break
 
-
-    webbrowser.open(config['url'], new=1, autoraise=True)
-    click.echo('Your browser has been opened to visit:\n\n\t{}'.format(config['url']))
+    if success:
+        webbrowser.open(config['url'], new=1, autoraise=True)
+        click.echo('Your browser has been opened to visit:\n\n\t{}\n'.format(config['url']))
 
     password = password or keyring.get_password(KEYRING_KEY, user)
 
