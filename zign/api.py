@@ -6,6 +6,7 @@ import stups_cli.config
 import time
 import tokens
 import requests
+import webbrowser
 import yaml
 
 from .config import KEYRING_KEY, TOKENS_FILE_PATH
@@ -124,6 +125,9 @@ def get_named_token(scope, realm, name, user, password, url=None,
 
     stups_cli.config.store_config(config, 'zign')
 
+    print(url, scope, realm, name, user, password, url, insecure, refresh, use_keyring, prompt)
+    webbrowser.open(config['url'], new=1, autoraise=True)
+    click.echo('Your browser has been opened to visit:\n\n\t{}'.format(config['url']))
     password = password or keyring.get_password(KEYRING_KEY, user)
 
     while True:
