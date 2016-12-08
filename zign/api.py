@@ -13,6 +13,10 @@ import yaml
 from .config import KEYRING_KEY, TOKENS_FILE_PATH
 from oauth2client import client
 from oauth2client import tools
+from requests import RequestException
+from urllib.parse import urlparse
+from urllib.parse import urlencode
+from urllib.parse import urlunsplit
 
 TOKEN_MINIMUM_VALIDITY_SECONDS = 60*5  # 5 minutes
 
@@ -97,9 +101,9 @@ def store_token(name: str, result: dict):
         yaml.safe_dump(data, fd)
 
 
-def get_token_browser_authentication(name, refresh=False, auth_url=None, scope=None, client_id=None,
+def get_token_browser_redirect(name, refresh=False, auth_url=None, scope=None, client_id=None,
                                      business_partner_id=None):
-    '''Get a named access token, opens a browser to authenticate through the configured auth URL'''
+    '''Get a named access token and opens a browser to authenticate through the configured auth URL'''
 
     if name and not refresh:
         existing_token = get_existing_token(name)
@@ -113,27 +117,27 @@ def get_token_browser_authentication(name, refresh=False, auth_url=None, scope=N
     client_id = client_id or config.get('client_id')
     business_partner_id = business_partner_id or config.get('business_partner_id')
 
-    while not url and prompt:
-        url = click.prompt('Please enter the OAuth access token service URL', type=UrlType())
+    while not auth_url:
+        auth_url = click.prompt('Please enter the OAuth access token service URL', type=UrlType())
 
         try:
-            requests.get(url, timeout=5, verify=not insecure)
-        except:
-            error('Could not reach {}'.format(url))
-            url = None
+            requests.get(auth_url, timeout=5)
+        except RequestException:
+            error('Could not reach {}'.format(auth_url))
+            auth_url = None
 
-        config['auth_url'] = url
+        config['auth_url'] = auth_url
 
-    while not scope and prompt:
+    while not scope:
         scope = click.prompt('Please enter the scope to be requested')
         config['scope'] = scope
 
-    while not client_id and prompt:
-        client_id = click.prompt('Please enter the client ID to be requested')
+    while not client_id:
+        client_id = click.prompt('Please enter the client ID')
         config['client_id'] = client_id
 
-    while not business_partner_id and prompt:
-        business_partner_id = click.prompt('Please enter the business partner ID to be requested')
+    while not business_partner_id:
+        business_partner_id = click.prompt('Please enter the business partner ID')
         config['business_partner_id'] = business_partner_id
 
     stups_cli.config.store_config(config, 'zign')
@@ -163,9 +167,14 @@ def get_token_browser_authentication(name, refresh=False, auth_url=None, scope=N
                    'client_id': config['client_id'],
                    'redirect_uri': 'http://localhost:{}'.format(port_number) }
 
-        webbrowser.open(authorize_url, new=1, autoraise=True)
+        parsed_auth_url = urlparse(auth_url)
+        browser_url = urlunsplit((parsed_auth_url.scheme, parsed_auth_url.netloc, parsed_auth_url.path,
+                              urlencode(params), ''))
+
+        webbrowser.open(browser_url, new=1, autoraise=True)
         click.echo('Your browser has been opened to visit:\n\n\t{}\n'.format(config['url']))
 
+    return
     password = password or keyring.get_password(KEYRING_KEY, user)
 
     while True:
