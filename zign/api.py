@@ -149,7 +149,8 @@ def get_token_browser_redirect(name, refresh=False, auth_url=None, scope=None, c
 
     if name and not refresh:
         existing_token = get_existing_token(name)
-        if existing_token:
+        # This will clear any non-JWT tokens
+        if existing_token and existing_token.get('access_token').count('.') >= 2:
             return existing_token
 
     config = get_config()
