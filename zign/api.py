@@ -11,15 +11,37 @@ import webbrowser
 import yaml
 
 from .config import KEYRING_KEY, TOKENS_FILE_PATH
-from oauth2client import client
 from oauth2client import tools
 from requests import RequestException
+from urllib.parse import parse_qs
 from urllib.parse import urlparse
 from urllib.parse import urlencode
 from urllib.parse import urlunsplit
 
 TOKEN_MINIMUM_VALIDITY_SECONDS = 60*5  # 5 minutes
 
+SUCCESS_PAGE='''<!DOCTYPE HTML>
+<html lang="en-US">
+  <head>
+    <title>Authentication Successful - Zign</title>
+  </head>
+  <body>
+    <p><font face=arial>You are now authenticated with Zign.</font></p>
+    <p><font face=arial>The authentication flow has completed. You may close this window.</font></p>
+  </body>
+</html>'''
+
+ERROR_PAGE='''<!DOCTYPE HTML>
+<html lang="en-US">
+  <head>
+    <title>Authentication Failed - Zign</title>
+  </head>
+  <body>
+    <p><font face=arial>You are now authenticated with Zign.</font></p>
+    <p><font face=arial>The authentication flow did not complete successfully. Please try again. You may close this
+    window.</font></p>
+  </body>
+</html>'''
 
 class ServerError(Exception):
     def __init__(self, message):
@@ -41,6 +63,26 @@ class ConfigurationError(Exception):
     def __str__(self):
         return 'Configuration error: {}'.format(self.msg)
 
+class ClientRedirectHandler(tools.ClientRedirectHandler):
+    '''Handles OAuth 2.0 redirect and return a success page if the flow has completed.'''
+
+    def do_GET(self):
+        '''Handle the GET request from the redirect.
+
+        Parses the token from the query parameters and returns a success page if the flow has completed'''
+
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+        query_string = urlparse(self.path).query
+        self.server.query_params = parse_qs(query_string)
+
+        if 'token' in self.server.query_params:
+            page = SUCCESS_PAGE
+        else:
+            page = ERROR_PAGE
+
+        self.wfile.write(page)
 
 def get_config():
     return stups_cli.config.load_config('zign')
@@ -174,31 +216,14 @@ def get_token_browser_redirect(name, refresh=False, auth_url=None, scope=None, c
         webbrowser.open(browser_url, new=1, autoraise=True)
         click.echo('Your browser has been opened to visit:\n\n\t{}\n'.format(config['url']))
 
-    return
-    password = password or keyring.get_password(KEYRING_KEY, user)
+    httpd.handle_request()
 
-    while True:
-        if not password and prompt:
-            password = click.prompt('Password for {}'.format(user), hide_input=True)
+    if 'token' in httpd.query_params:
+        token = httpd.query_params['token']
+    else:
+        raise AuthenticationFailed('Failed to retrieve token')
 
-        try:
-            result = get_new_token(realm, scope, user, password, url=url, insecure=insecure)
-            break
-        except AuthenticationFailed as e:
-            if prompt:
-                error(str(e))
-                info('Please check your username and password and try again.')
-                password = None
-            else:
-                raise
-
-    if result and use_keyring:
-        keyring.set_password(KEYRING_KEY, user, password)
-
-    if name:
-        store_token(name, result)
-
-    return result
+    return token
 
 
 def get_named_token(scope, realm, name, user, password, url=None,
