@@ -216,6 +216,8 @@ def get_token_browser_redirect(name, refresh=False, auth_url=None, scope=None, c
 
         webbrowser.open(browser_url, new=1, autoraise=True)
         click.echo('Your browser has been opened to visit:\n\n\t{}\n'.format(config['url']))
+    else:
+        raise AuthenticationFailed('Failed to launch local server')
 
     httpd.handle_request()
 
