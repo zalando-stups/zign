@@ -97,6 +97,101 @@ def store_token(name: str, result: dict):
         yaml.safe_dump(data, fd)
 
 
+def get_token_browser_authentication(name, refresh=False, auth_url=None, scope=None, client_id=None,
+                                     business_partner_id=None):
+    '''Get a named access token, opens a browser to authenticate through the configured auth URL'''
+
+    if name and not refresh:
+        existing_token = get_existing_token(name)
+        if existing_token:
+            return existing_token
+
+    config = get_config()
+
+    auth_url = auth_url or config.get('auth_url')
+    scope = scope or config.get('scope')
+    client_id = client_id or config.get('client_id')
+    business_partner_id = business_partner_id or config.get('business_partner_id')
+
+    while not url and prompt:
+        url = click.prompt('Please enter the OAuth access token service URL', type=UrlType())
+
+        try:
+            requests.get(url, timeout=5, verify=not insecure)
+        except:
+            error('Could not reach {}'.format(url))
+            url = None
+
+        config['auth_url'] = url
+
+    while not scope and prompt:
+        scope = click.prompt('Please enter the scope to be requested')
+        config['scope'] = scope
+
+    while not client_id and prompt:
+        client_id = click.prompt('Please enter the client ID to be requested')
+        config['client_id'] = client_id
+
+    while not business_partner_id and prompt:
+        business_partner_id = click.prompt('Please enter the business partner ID to be requested')
+        config['business_partner_id'] = business_partner_id
+
+    stups_cli.config.store_config(config, 'zign')
+
+    success = False
+    port_number = 8081
+    max_port_number = port_number + 100
+
+    while True:
+        try:
+            httpd = tools.ClientRedirectServer(('localhost', port_number), None)
+        except socket.error as e:
+            if port_number > max_port_number:
+                success = False
+                break
+            port_number += 1
+        else:
+            success = True
+            break
+
+    if success:
+        redirect_uri = 'http://localhost:{}'.format(port_number)
+
+        params = { 'response_type' : 'token',
+                   'scope' : config['scope'],
+                   'business_partner_id': config['business_partner_id'],
+                   'client_id': config['client_id'],
+                   'redirect_uri': 'http://localhost:{}'.format(port_number) }
+
+        webbrowser.open(authorize_url, new=1, autoraise=True)
+        click.echo('Your browser has been opened to visit:\n\n\t{}\n'.format(config['url']))
+
+    password = password or keyring.get_password(KEYRING_KEY, user)
+
+    while True:
+        if not password and prompt:
+            password = click.prompt('Password for {}'.format(user), hide_input=True)
+
+        try:
+            result = get_new_token(realm, scope, user, password, url=url, insecure=insecure)
+            break
+        except AuthenticationFailed as e:
+            if prompt:
+                error(str(e))
+                info('Please check your username and password and try again.')
+                password = None
+            else:
+                raise
+
+    if result and use_keyring:
+        keyring.set_password(KEYRING_KEY, user, password)
+
+    if name:
+        store_token(name, result)
+
+    return result
+
+
 def get_named_token(scope, realm, name, user, password, url=None,
                     insecure=False, refresh=False, use_keyring=True, prompt=False):
     '''get named access token, return existing if still valid'''
@@ -125,27 +220,8 @@ def get_named_token(scope, realm, name, user, password, url=None,
             url = None
 
         config['url'] = url
+
     stups_cli.config.store_config(config, 'zign')
-
-    success = False
-    port_number = 8085
-    max_port_number = port_number + 100
-
-    while True:
-        try:
-            httpd = tools.ClientRedirectServer(('localhost', port_number), None)
-        except socket.error as e:
-            if port_number > max_port_number:
-                success = False
-                break
-            port_number += 1
-        else:
-            success = True
-            break
-
-    if success:
-        webbrowser.open(config['url'], new=1, autoraise=True)
-        click.echo('Your browser has been opened to visit:\n\n\t{}\n'.format(config['url']))
 
     password = password or keyring.get_password(KEYRING_KEY, user)
 
