@@ -213,12 +213,16 @@ def get_token_browser_redirect(name, refresh=False, auth_url=None, scope=None, c
                    'client_id': config['client_id'],
                    'redirect_uri': 'http://localhost:{}'.format(port_number) }
 
+        param_list = [ '{}={}'.format(key, params[key]) for key in params ]
+        param_string = '&'.join(param_list)
+
         parsed_auth_url = urlparse(auth_url)
         browser_url = urlunsplit((parsed_auth_url.scheme, parsed_auth_url.netloc, parsed_auth_url.path,
-                              urlencode(params), ''))
+                              param_string, ''))
+
 
         webbrowser.open(browser_url, new=1, autoraise=True)
-        click.echo('Your browser has been opened to visit:\n\n\t{}\n'.format(config['url']))
+        click.echo('Your browser has been opened to visit:\n\n\t{}\n'.format(browser_url))
     else:
         raise AuthenticationFailed('Failed to launch local server')
 
