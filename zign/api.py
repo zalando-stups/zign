@@ -113,18 +113,13 @@ class ClientRedirectHandler(tools.ClientRedirectHandler):
         #self.server.query_params = '' parse_qs(query_string)
 
         if not query_string:
-            self.wfile.write(page.encode('utf-8')) 
+            self.wfile.write(EXTRACT_TOKEN_PAGE.encode('utf-8')) 
         else:
-<<<<<<< 6412c646b3bd16843198733b1782bb5ea38adedc
-            page = EXTRACT_TOKEN_PAGE
-=======
             if 'access_token' in self.server.query_params:
                 page = SUCCESS_PAGE
             else:
                 page = ERROR_PAGE
->>>>>>> Started javascript redirect
-
-        self.wfile.write(page.encode('utf-8'))
+            self.wfile.write(page.encode('utf-8'))
 
 def get_config():
     return stups_cli.config.load_config('zign')
