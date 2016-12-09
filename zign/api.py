@@ -107,17 +107,22 @@ class ClientRedirectHandler(tools.ClientRedirectHandler):
         self.send_response(200)
         self.send_header('Content-type', 'text/html')
         self.end_headers()
-        query_string = urlparse(self.path.replace('#', '?', 1)).query
-        print(query_string)
-        query_dump = self.path
-        print(query_dump)
-        self.server.query_params = parse_qs(query_string)
+        query_string = urlparse(self.path).query
+        print('Path', self.path)
+        print('Query string', query_string)
+        #self.server.query_params = '' parse_qs(query_string)
 
-        if 'access_token' in self.server.query_params:
-            print('Access token {}'.format(self.server.query_params))
-            page = SUCCESS_PAGE
+        if not query_string:
+            self.wfile.write(page.encode('utf-8')) 
         else:
+<<<<<<< 6412c646b3bd16843198733b1782bb5ea38adedc
             page = EXTRACT_TOKEN_PAGE
+=======
+            if 'access_token' in self.server.query_params:
+                page = SUCCESS_PAGE
+            else:
+                page = ERROR_PAGE
+>>>>>>> Started javascript redirect
 
         self.wfile.write(page.encode('utf-8'))
 
