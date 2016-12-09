@@ -37,9 +37,8 @@ ERROR_PAGE='''<!DOCTYPE HTML>
     <title>Authentication Failed - Zign</title>
   </head>
   <body>
-    <p><font face=arial>You are now authenticated with Zign.</font></p>
-    <p><font face=arial>The authentication flow did not complete successfully. Please try again. You may close this
-    window.</font></p>
+    <p><font face=arial>The authentication flow did not complete successfully.</font></p>
+    <p><font face=arial>Please try again. You may close this window.</font></p>
   </body>
 </html>'''
 
@@ -74,15 +73,19 @@ class ClientRedirectHandler(tools.ClientRedirectHandler):
         self.send_response(200)
         self.send_header('Content-type', 'text/html')
         self.end_headers()
-        query_string = urlparse(self.path).query
+        query_string = urlparse(self.path.replace('#', '?', 1)).query
+        print(query_string)
+        query_dump = self.path
+        print(query_dump)
         self.server.query_params = parse_qs(query_string)
 
-        if 'token' in self.server.query_params:
+        if 'access_token' in self.server.query_params:
+            print('Access token {}'.format(self.server.query_params))
             page = SUCCESS_PAGE
         else:
             page = ERROR_PAGE
 
-        self.wfile.write(page)
+        self.wfile.write(page.encode('utf-8'))
 
 def get_config():
     return stups_cli.config.load_config('zign')
@@ -191,7 +194,7 @@ def get_token_browser_redirect(name, refresh=False, auth_url=None, scope=None, c
 
     while True:
         try:
-            httpd = tools.ClientRedirectServer(('localhost', port_number), None)
+            httpd = tools.ClientRedirectServer(('localhost', port_number), ClientRedirectHandler)
         except socket.error as e:
             if port_number > max_port_number:
                 success = False
@@ -220,9 +223,9 @@ def get_token_browser_redirect(name, refresh=False, auth_url=None, scope=None, c
         raise AuthenticationFailed('Failed to launch local server')
 
     httpd.handle_request()
-
-    if 'token' in httpd.query_params:
-        token = httpd.query_params['token']
+    print(httpd.query_params)
+    if 'access_token' in httpd.query_params:
+        token = httpd.query_params['access_token']
     else:
         raise AuthenticationFailed('Failed to retrieve token')
 
