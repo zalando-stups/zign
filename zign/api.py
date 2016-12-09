@@ -24,21 +24,37 @@ SUCCESS_PAGE='''<!DOCTYPE HTML>
 <html lang="en-US">
   <head>
     <title>Authentication Successful - Zign</title>
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+    </style>
   </head>
   <body>
-    <p><font face=arial>You are now authenticated with Zign.</font></p>
-    <p><font face=arial>The authentication flow has completed. You may close this window.</font></p>
+    <p>You are now authenticated with Zign.</p>
+    <p>The authentication flow has completed. You may close this window.</p>
   </body>
 </html>'''
 
-ERROR_PAGE='''<!DOCTYPE HTML>
+EXTRACT_TOKEN_PAGE='''<!DOCTYPE HTML>
 <html lang="en-US">
   <head>
-    <title>Authentication Failed - Zign</title>
+    <!-- fill out the blanks please -->
+    <title>...</title>
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+    </style>
+    <script>
+        (function() {
+            const fragment = window.location.hash.substring(1)
+            window.location.href = "http://localhost:8081/?" + fragment
+        })();
+    </script>
   </head>
   <body>
-    <p><font face=arial>The authentication flow did not complete successfully.</font></p>
-    <p><font face=arial>Please try again. You may close this window.</font></p>
+    <p>...</p>
   </body>
 </html>'''
 
@@ -83,7 +99,7 @@ class ClientRedirectHandler(tools.ClientRedirectHandler):
             print('Access token {}'.format(self.server.query_params))
             page = SUCCESS_PAGE
         else:
-            page = ERROR_PAGE
+            page = EXTRACT_TOKEN_PAGE
 
         self.wfile.write(page.encode('utf-8'))
 
