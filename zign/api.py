@@ -76,6 +76,18 @@ EXTRACT_TOKEN_PAGE='''<!DOCTYPE HTML>
   </body>
 </html>'''
 
+ERROR_PAGE='''<!DOCTYPE HTML>
+<html lang="en-US">
+  <head>
+    <title>Authentication Failed - Zign</title>
+  </head>
+  <body>
+    <p><font face=arial>You are now authenticated with Zign.</font></p>
+    <p><font face=arial>The authentication flow did not complete successfully. Please try again. You may close this
+    window.</font></p>
+  </body>
+</html>'''
+
 class ServerError(Exception):
     def __init__(self, message):
         self.message = message
@@ -108,13 +120,11 @@ class ClientRedirectHandler(tools.ClientRedirectHandler):
         self.send_header('Content-type', 'text/html')
         self.end_headers()
         query_string = urlparse(self.path).query
-        print('Path', self.path)
-        print('Query string', query_string)
-        #self.server.query_params = '' parse_qs(query_string)
 
         if not query_string:
             self.wfile.write(EXTRACT_TOKEN_PAGE.encode('utf-8')) 
         else:
+            self.server.query_params = parse_qs(query_string)
             if 'access_token' in self.server.query_params:
                 page = SUCCESS_PAGE
             else:
@@ -254,16 +264,24 @@ def get_token_browser_redirect(name, refresh=False, auth_url=None, scope=None, c
         browser_url = urlunsplit((parsed_auth_url.scheme, parsed_auth_url.netloc, parsed_auth_url.path,
                               param_string, ''))
 
-
         webbrowser.open(browser_url, new=1, autoraise=True)
         click.echo('Your browser has been opened to visit:\n\n\t{}\n'.format(browser_url))
     else:
         raise AuthenticationFailed('Failed to launch local server')
 
+    # Handle first request, which will redirect to Javascript
     httpd.handle_request()
-    print(httpd.query_params)
+    # Handle next request, with token
+    httpd.handle_request()
+
     if 'access_token' in httpd.query_params:
-        token = httpd.query_params['access_token']
+        token = { 'access_token': httpd.query_params['access_token'][0],
+                  'refresh_token': httpd.query_params['refresh_token'][0],
+                  'expires_in': int(httpd.query_params['expires_in'][0]),
+                  'token_type': httpd.query_params['token_type'][0],
+                  'scope': httpd.query_params['scope'][0] }
+
+        store_token(name, token)
     else:
         raise AuthenticationFailed('Failed to retrieve token')
 
