@@ -49,7 +49,11 @@ CLASSIFIERS = [
     'Programming Language :: Python :: Implementation :: CPython',
 ]
 
-CONSOLE_SCRIPTS = ['zign = zign.cli:main']
+CONSOLE_SCRIPTS = [
+    # TODO: deprecate "zign"
+    'zign = zign.cli:main',
+    'ztoken = zign.cli:main'
+]
 
 
 class PyTest(TestCommand):
