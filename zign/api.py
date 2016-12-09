@@ -45,16 +45,34 @@ EXTRACT_TOKEN_PAGE='''<!DOCTYPE HTML>
         body {
             font-family: sans-serif;
         }
+        #error {
+            color: red;
+        }
     </style>
     <script>
         (function() {
+            function parseQueryString(qs) {
+                const result = {}
+                for(const part of qs.split("&")) {
+                    const [key, val = ""] = part.split("=")
+                    result[decodeURIComponent(key)] = decodeURIComponent(val)
+                }
+                return result
+            }
             const fragment = window.location.hash.substring(1)
-            window.location.href = "http://localhost:8081/?" + fragment
+            const params = parseQueryString(fragment)
+            if (params.access_token) {
+                window.location.href = "http://localhost:8081/?" + fragment
+            } else {
+                document.getElementById("error").style = "display: block;"
+            }
         })();
     </script>
   </head>
   <body>
-    <p>...</p>
+    <p style="display:none;" id="error">
+        Please put a nice message here.
+    </p>
   </body>
 </html>'''
 
