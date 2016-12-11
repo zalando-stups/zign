@@ -52,7 +52,7 @@ CLASSIFIERS = [
 CONSOLE_SCRIPTS = [
     # TODO: deprecate "zign"
     'zign = zign.cli:main',
-    'ztoken = zign.cli:main'
+    'ztoken = zign.cli_ztoken:main'
 ]
 
 
