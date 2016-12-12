@@ -45,8 +45,6 @@ def format_expires(token: dict):
 def list_tokens(output):
     '''List tokens'''
     data = get_tokens()
-    if not data:
-        return click.echo('No tokens stored.')
 
     rows = []
     for key, val in sorted(data.items()):
