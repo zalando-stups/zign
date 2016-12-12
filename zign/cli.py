@@ -20,7 +20,7 @@ output_option = click.option('-o', '--output', type=click.Choice(['text', 'json'
 def print_version(ctx, param, value):
     if not value or ctx.resilient_parsing:
         return
-    click.echo('{command} {version}'.format(command=ctx.info_name, version=zign.__version__));
+    click.echo('{command} {version}'.format(command=ctx.info_name, version=zign.__version__))
     ctx.exit()
 
 
@@ -33,6 +33,7 @@ def cli(ctx):
 
     if not ctx.invoked_subcommand:
         ctx.invoke(token)
+
 
 def format_expires(token: dict):
     now = time.time()
@@ -50,7 +51,7 @@ def list_tokens(output):
     for key, val in sorted(data.items()):
         access_token = val.get('access_token')
         if output == 'text' and len(access_token) > 36:
-            access_token = access_token[:33] + '...' 
+            access_token = access_token[:33] + '...'
         rows.append({'name': key,
                      'access_token': access_token,
                      'scope': val.get('scope'),

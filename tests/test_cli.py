@@ -18,7 +18,8 @@ def test_create_list_delete(monkeypatch):
     runner = CliRunner()
 
     with runner.isolated_filesystem():
-        result = runner.invoke(cli, ['token', '-n', 'mytok', '--password', 'mypass'], catch_exceptions=False, input='localhost\n')
+        result = runner.invoke(cli, ['token', '-n', 'mytok', '--password', 'mypass'], catch_exceptions=False,
+                               input='localhost\n')
 
         assert token == result.output.rstrip().split('\n')[-1]
 
@@ -51,7 +52,8 @@ def test_empty_config(monkeypatch):
     runner = CliRunner()
 
     with runner.isolated_filesystem():
-        result = runner.invoke(cli, ['token', '-n', 'mytok', '--password', 'mypass'], catch_exceptions=False, input='localhost\n')
+        result = runner.invoke(cli, ['token', '-n', 'mytok', '--password', 'mypass'], catch_exceptions=False,
+                               input='localhost\n')
         assert token == result.output.rstrip().split('\n')[-1]
 
 
@@ -75,7 +77,8 @@ def test_auth_failure(monkeypatch):
     runner = CliRunner()
 
     with runner.isolated_filesystem():
-        result = runner.invoke(cli, ['token', '-n', 'mytok', '-U', 'myusr', '--password', 'mypass'], catch_exceptions=False, input='wrongpw\ncorrectpass\n')
+        result = runner.invoke(cli, ['token', '-n', 'mytok', '-U', 'myusr', '--password', 'mypass'],
+                               catch_exceptions=False, input='wrongpw\ncorrectpass\n')
         assert 'Authentication failed: Token Service returned ' in result.output
         assert 'Please check your username and password and try again.' in result.output
         assert 'Password for myusr: ' in result.output
@@ -96,7 +99,8 @@ def test_server_error(monkeypatch):
     runner = CliRunner()
 
     with runner.isolated_filesystem():
-        result = runner.invoke(cli, ['token', '-n', 'mytok', '-U', 'myusr', '--password', 'mypass'], catch_exceptions=False)
+        result = runner.invoke(cli, ['token', '-n', 'mytok', '-U', 'myusr', '--password', 'mypass'],
+                               catch_exceptions=False)
         assert 'Server error: Token Service returned HTTP status 503' in result.output
 
 
@@ -113,9 +117,9 @@ def test_user_config(monkeypatch):
         assert user == 'jdoe'
         return response
 
-
     monkeypatch.setattr('keyring.set_password', MagicMock())
-    monkeypatch.setattr('stups_cli.config.load_config', lambda x: {'user': 'jdoe', 'url': 'https://localhost/access_token'})
+    monkeypatch.setattr('stups_cli.config.load_config',
+                        lambda x: {'user': 'jdoe', 'url': 'https://localhost/access_token'})
     monkeypatch.setattr('stups_cli.config.store_config', lambda x, y: None)
     monkeypatch.setattr('requests.get', get_token)
 

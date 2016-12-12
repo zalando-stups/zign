@@ -15,12 +15,11 @@ from oauth2client import tools
 from requests import RequestException
 from urllib.parse import parse_qs
 from urllib.parse import urlparse
-from urllib.parse import urlencode
 from urllib.parse import urlunsplit
 
 TOKEN_MINIMUM_VALIDITY_SECONDS = 60*5  # 5 minutes
 
-SUCCESS_PAGE='''<!DOCTYPE HTML>
+SUCCESS_PAGE = '''<!DOCTYPE HTML>
 <html lang="en-US">
   <head>
     <title>Authentication Successful - Zign</title>
@@ -36,7 +35,7 @@ SUCCESS_PAGE='''<!DOCTYPE HTML>
   </body>
 </html>'''
 
-EXTRACT_TOKEN_PAGE='''<!DOCTYPE HTML>
+EXTRACT_TOKEN_PAGE = '''<!DOCTYPE HTML>
 <html lang="en-US">
   <head>
     <!-- fill out the blanks please -->
@@ -76,7 +75,7 @@ EXTRACT_TOKEN_PAGE='''<!DOCTYPE HTML>
   </body>
 </html>'''
 
-ERROR_PAGE='''<!DOCTYPE HTML>
+ERROR_PAGE = '''<!DOCTYPE HTML>
 <html lang="en-US">
   <head>
     <title>Authentication Failed - Zign</title>
@@ -87,6 +86,7 @@ ERROR_PAGE='''<!DOCTYPE HTML>
     window.</font></p>
   </body>
 </html>'''
+
 
 class ServerError(Exception):
     def __init__(self, message):
@@ -108,6 +108,7 @@ class ConfigurationError(Exception):
     def __str__(self):
         return 'Configuration error: {}'.format(self.msg)
 
+
 class ClientRedirectHandler(tools.ClientRedirectHandler):
     '''Handles OAuth 2.0 redirect and return a success page if the flow has completed.'''
 
@@ -122,7 +123,7 @@ class ClientRedirectHandler(tools.ClientRedirectHandler):
         query_string = urlparse(self.path).query
 
         if not query_string:
-            self.wfile.write(EXTRACT_TOKEN_PAGE.encode('utf-8')) 
+            self.wfile.write(EXTRACT_TOKEN_PAGE.encode('utf-8'))
         else:
             self.server.query_params = parse_qs(query_string)
             if 'access_token' in self.server.query_params:
@@ -130,6 +131,7 @@ class ClientRedirectHandler(tools.ClientRedirectHandler):
             else:
                 page = ERROR_PAGE
             self.wfile.write(page.encode('utf-8'))
+
 
 def get_config():
     return stups_cli.config.load_config('zign')
@@ -191,7 +193,7 @@ def store_token(name: str, result: dict):
 
 
 def get_token_browser_redirect(name, refresh=False, auth_url=None, scope=None, client_id=None,
-                                     business_partner_id=None):
+                               business_partner_id=None):
     '''Get a named access token and opens a browser to authenticate through the configured auth URL'''
 
     if name and not refresh:
@@ -249,20 +251,18 @@ def get_token_browser_redirect(name, refresh=False, auth_url=None, scope=None, c
             break
 
     if success:
-        redirect_uri = 'http://localhost:{}'.format(port_number)
+        params = {'response_type':          'token',
+                  'scope':                  config['scope'],
+                  'business_partner_id':    config['business_partner_id'],
+                  'client_id':              config['client_id'],
+                  'redirect_uri':           'http://localhost:{}'.format(port_number)}
 
-        params = { 'response_type' : 'token',
-                   'scope' : config['scope'],
-                   'business_partner_id': config['business_partner_id'],
-                   'client_id': config['client_id'],
-                   'redirect_uri': 'http://localhost:{}'.format(port_number) }
-
-        param_list = [ '{}={}'.format(key, params[key]) for key in params ]
+        param_list = ['{}={}'.format(key, params[key]) for key in params]
         param_string = '&'.join(param_list)
 
         parsed_auth_url = urlparse(auth_url)
         browser_url = urlunsplit((parsed_auth_url.scheme, parsed_auth_url.netloc, parsed_auth_url.path,
-                              param_string, ''))
+                                 param_string, ''))
 
         webbrowser.open(browser_url, new=1, autoraise=True)
         click.echo('Your browser has been opened to visit:\n\n\t{}\n'.format(browser_url))
@@ -275,11 +275,11 @@ def get_token_browser_redirect(name, refresh=False, auth_url=None, scope=None, c
     httpd.handle_request()
 
     if 'access_token' in httpd.query_params:
-        token = { 'access_token': httpd.query_params['access_token'][0],
-                  'refresh_token': httpd.query_params['refresh_token'][0],
-                  'expires_in': int(httpd.query_params['expires_in'][0]),
-                  'token_type': httpd.query_params['token_type'][0],
-                  'scope': httpd.query_params['scope'][0] }
+        token = {'access_token':    httpd.query_params['access_token'][0],
+                 'refresh_token':   httpd.query_params['refresh_token'][0],
+                 'expires_in':      int(httpd.query_params['expires_in'][0]),
+                 'token_type':      httpd.query_params['token_type'][0],
+                 'scope':           httpd.query_params['scope'][0]}
 
         store_token(name, token)
     else:
