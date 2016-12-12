@@ -62,4 +62,5 @@ def token(obj, scope, url, realm, name, user, password, insecure, refresh):
 
 
 def main():
+    click.secho('WARNING: zign is deprecated! Use ztoken instead.', fg='yellow')
     cli_zign()
