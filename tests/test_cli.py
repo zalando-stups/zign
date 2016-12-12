@@ -1,7 +1,7 @@
 import json
 from click.testing import CliRunner
 from unittest.mock import MagicMock
-from zign.cli import cli
+from zign.cli_zign import cli_zign
 
 
 def test_create_list_delete(monkeypatch):
@@ -18,23 +18,23 @@ def test_create_list_delete(monkeypatch):
     runner = CliRunner()
 
     with runner.isolated_filesystem():
-        result = runner.invoke(cli, ['token', '-n', 'mytok', '--password', 'mypass'], catch_exceptions=False,
+        result = runner.invoke(cli_zign, ['token', '-n', 'mytok', '--password', 'mypass'], catch_exceptions=False,
                                input='localhost\n')
 
         assert token == result.output.rstrip().split('\n')[-1]
 
-        result = runner.invoke(cli, ['list', '-o', 'json'], catch_exceptions=False)
+        result = runner.invoke(cli_zign, ['list', '-o', 'json'], catch_exceptions=False)
         data = json.loads(result.output)
         assert len(data) >= 1
         assert 'mytok' in [r['name'] for r in data]
 
-        result = runner.invoke(cli, ['delete', 'mytok'], catch_exceptions=False)
-        result = runner.invoke(cli, ['list', '-o', 'json'], catch_exceptions=False)
+        result = runner.invoke(cli_zign, ['delete', 'mytok'], catch_exceptions=False)
+        result = runner.invoke(cli_zign, ['list', '-o', 'json'], catch_exceptions=False)
         data = json.loads(result.output)
         assert 'mytok' not in [r['name'] for r in data]
 
         # should work again for already deleted tokens
-        result = runner.invoke(cli, ['delete', 'mytok'], catch_exceptions=False)
+        result = runner.invoke(cli_zign, ['delete', 'mytok'], catch_exceptions=False)
 
 
 def test_empty_config(monkeypatch):
@@ -52,7 +52,7 @@ def test_empty_config(monkeypatch):
     runner = CliRunner()
 
     with runner.isolated_filesystem():
-        result = runner.invoke(cli, ['token', '-n', 'mytok', '--password', 'mypass'], catch_exceptions=False,
+        result = runner.invoke(cli_zign, ['token', '-n', 'mytok', '--password', 'mypass'], catch_exceptions=False,
                                input='localhost\n')
         assert token == result.output.rstrip().split('\n')[-1]
 
@@ -77,7 +77,7 @@ def test_auth_failure(monkeypatch):
     runner = CliRunner()
 
     with runner.isolated_filesystem():
-        result = runner.invoke(cli, ['token', '-n', 'mytok', '-U', 'myusr', '--password', 'mypass'],
+        result = runner.invoke(cli_zign, ['token', '-n', 'mytok', '-U', 'myusr', '--password', 'mypass'],
                                catch_exceptions=False, input='wrongpw\ncorrectpass\n')
         assert 'Authentication failed: Token Service returned ' in result.output
         assert 'Please check your username and password and try again.' in result.output
@@ -99,7 +99,7 @@ def test_server_error(monkeypatch):
     runner = CliRunner()
 
     with runner.isolated_filesystem():
-        result = runner.invoke(cli, ['token', '-n', 'mytok', '-U', 'myusr', '--password', 'mypass'],
+        result = runner.invoke(cli_zign, ['token', '-n', 'mytok', '-U', 'myusr', '--password', 'mypass'],
                                catch_exceptions=False)
         assert 'Server error: Token Service returned HTTP status 503' in result.output
 
@@ -126,5 +126,5 @@ def test_user_config(monkeypatch):
     runner = CliRunner()
 
     with runner.isolated_filesystem():
-        result = runner.invoke(cli, ['token', '-n', 'mytok', '--password', 'mypass'], catch_exceptions=False)
+        result = runner.invoke(cli_zign, ['token', '-n', 'mytok', '--password', 'mypass'], catch_exceptions=False)
         assert token == result.output.rstrip().split('\n')[-1]
