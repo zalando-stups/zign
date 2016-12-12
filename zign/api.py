@@ -144,6 +144,8 @@ def get_config(config_module=None, override=dict()):
     if config_module:
         return stups_cli.config.load_config(config_module)
 
+    # Make sure no keys with empty values are present
+    override = {k: v for (k, v) in override.items() if v}
     config = stups_cli.config.load_config('ztoken')
     old_config = config.copy()
 
@@ -168,7 +170,8 @@ def get_config(config_module=None, override=dict()):
     if config != old_config:
         stups_cli.config.store_config(config, 'ztoken')
 
-    return {**override, **config}
+    config.update(override)
+    return config
 
 
 def get_tokens():
@@ -262,13 +265,12 @@ def get_token_implicit_flow(name=None, scope=None, auth_url=None, client_id=None
     if success:
         params = {'response_type':          'token',
                   'scope':                  config['scope'],
-                  'business_partner_id':    config['business_partner_id'],
+                  'business_partner_id':    config['partner_id'],
                   'client_id':              config['client_id'],
                   'redirect_uri':           'http://localhost:{}'.format(port_number)}
 
         param_list = ['{}={}'.format(key, params[key]) for key in params]
         param_string = '&'.join(param_list)
-
         parsed_auth_url = urlparse(config['auth_url'])
         browser_url = urlunsplit((parsed_auth_url.scheme, parsed_auth_url.netloc, parsed_auth_url.path, param_string,
                                   ''))
