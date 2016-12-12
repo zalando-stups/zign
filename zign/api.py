@@ -133,43 +133,42 @@ class ClientRedirectHandler(tools.ClientRedirectHandler):
             self.wfile.write(page.encode('utf-8'))
 
 
-def get_config(config_module=None):
+def get_config(config_module=None, override=dict()):
     '''Returns the specified module's configuration. Defaults to ztoken.
 
-    Prompts for configuration values if ztoken module config is not present os has missing values.
+    Prompts for configuration values if ztoken module config is not present or has missing values.
+
+    If override is present, only prompts for non-existent values.
     '''
 
     if config_module:
         return stups_cli.config.load_config(config_module)
 
     config = stups_cli.config.load_config('ztoken')
+    old_config = config.copy()
 
-    while not 'auth_url' in config:
-        auth_url = click.prompt('Please enter the OAuth access token service URL', type=UrlType())
+    while 'auth_url' not in override and 'auth_url' not in config:
+        config['auth_url'] = click.prompt('Please enter the OAuth access token service URL', type=UrlType())
 
         try:
-            requests.get(auth_url, timeout=5)
+            requests.get(config['auth_url'], timeout=5)
         except RequestException:
-            error('Could not reach {}'.format(auth_url))
-            auth_url = None
+            error('Could not reach {}'.format(config['auth_url']))
+            del config['auth_url']
 
-        config['auth_url'] = auth_url
+    if 'scope' not in override and 'scope' not in config:
+        config['scope'] = click.prompt('Please enter the scope to be requested')
 
-    while not 'scope' in config:
-        scope = click.prompt('Please enter the scope to be requested')
-        config['scope'] = scope
+    if 'client_id' not in override and 'client_id' not in config:
+        config['client_id'] = click.prompt('Please enter the client ID')
 
-    while not 'client_id' in config:
-        client_id = click.prompt('Please enter the client ID')
-        config['client_id'] = client_id
+    if 'partner_id' not in override and 'partner_id' not in config:
+        config['partner_id'] = click.prompt('Please enter the business partner ID')
 
-    while not 'business_partner_id' in config:
-        business_partner_id = click.prompt('Please enter the business partner ID')
-        config['business_partner_id'] = business_partner_id
+    if config != old_config:
+        stups_cli.config.store_config(config, 'ztoken')
 
-    stups_cli.config.store_config(config, 'ztoken')
-
-    return config
+    return {**override, **config}
 
 
 def get_tokens():
@@ -227,7 +226,7 @@ def store_token(name: str, result: dict):
         yaml.safe_dump(data, fd)
 
 
-def get_token_implicit_flow(name=None, scope=None, auth_url=None, client_id=None, business_partner_id=None,
+def get_token_implicit_flow(name=None, scope=None, auth_url=None, client_id=None, partner_id=None,
                             refresh=False):
     '''Gets a Platform IAM access token using browser redirect flow'''
 
@@ -237,7 +236,11 @@ def get_token_implicit_flow(name=None, scope=None, auth_url=None, client_id=None
         if existing_token and existing_token.get('access_token').count('.') >= 2:
             return existing_token
 
-    config = get_config()
+    override = {'name':         name,
+                'auth_url':     auth_url,
+                'client_id':    client_id,
+                'partner_id':   partner_id}
+    config = get_config(override=override)
 
     success = False
     # Must match redirect URIs in client configuration (http://localhost:8081-8181)
@@ -268,7 +271,7 @@ def get_token_implicit_flow(name=None, scope=None, auth_url=None, client_id=None
 
         parsed_auth_url = urlparse(config['auth_url'])
         browser_url = urlunsplit((parsed_auth_url.scheme, parsed_auth_url.netloc, parsed_auth_url.path, param_string,
-                      ''))
+                                  ''))
 
         webbrowser.open(browser_url, new=1, autoraise=True)
         click.echo('Your browser has been opened to visit:\n\n\t{}\n'.format(browser_url))
@@ -286,12 +289,12 @@ def get_token_implicit_flow(name=None, scope=None, auth_url=None, client_id=None
                  'expires_in':      int(httpd.query_params['expires_in'][0]),
                  'token_type':      httpd.query_params['token_type'][0],
                  'scope':           httpd.query_params['scope'][0]}
-
-        store_token(name, token)
+        if name:
+            token['name'] = name
+            store_token(name, token)
+        return token
     else:
         raise AuthenticationFailed('Failed to retrieve token')
-
-    return token
 
 
 def get_named_token(scope, realm, name, user, password, url=None,
@@ -300,7 +303,7 @@ def get_named_token(scope, realm, name, user, password, url=None,
 
     if name and not refresh:
         existing_token = get_existing_token(name)
-        if existing_token:
+        if existing_token and '.' not in existing_token.get('access_token'):
             return existing_token
 
     if name and not realm:

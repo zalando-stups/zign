@@ -1,4 +1,3 @@
-import os
 import time
 
 import click
@@ -7,7 +6,7 @@ from clickclick import AliasedGroup, print_table, OutputFormat
 
 import zign
 import stups_cli.config
-from .api import get_named_token, get_tokens, ServerError
+from .api import get_token_implicit_flow, get_tokens, AuthenticationFailed
 from .config import TOKENS_FILE_PATH
 
 
@@ -46,6 +45,8 @@ def format_expires(token: dict):
 def list_tokens(output):
     '''List tokens'''
     data = get_tokens()
+    if not data:
+        return click.echo('No tokens stored.')
 
     rows = []
     for key, val in sorted(data.items()):
@@ -82,24 +83,18 @@ def delete_token(obj, name):
 @cli.command()
 @click.option('-n', '--name', help='Custom token name (will be stored)', metavar='TOKEN_NAME')
 @click.option('-s', '--scope', help='Scope to request access to', metavar='SCOPE')
-@click.option('-a', '--auth-url', help='Auth URL to generate access token', metavar='AUTH_URL')
-@click.option('-c', '--client-id', help='Client ID to use', metavar='CLIENT_ID')
-@click.option('-b', '--business-partner-id', help='Auth URL to generate access token', metavar='AUTH_URL')
+@click.option('-a', '--auth_url', help='Auth URL to generate access token', metavar='AUTH_URL')
+@click.option('-c', '--client_id', help='Client ID to use', metavar='CLIENT_ID')
+@click.option('-p', '--partner_id', help='Business Partner ID to use', metavar='PARTNER_ID')
 @click.option('-r', '--refresh', help='Force refresh of the access token', is_flag=True, default=False)
-def token(name, scope, auth_url, realm, name, user, password, insecure, refresh):
+def token(name, scope, auth_url, client_id, partner_id, refresh):
     '''Create a new Platform IAM token or use an existing one.'''
 
-    token = get_token_implicit_flow(name=None, scope=None, auth_url=None, client_id=None, business_partner_id=None,
-                                    refresh=False):
-
     try:
-        token = get_named_token(scope, realm, name, user, password, url, insecure, refresh, prompt=True)
+        token = get_token_implicit_flow(name, scope, auth_url, client_id, partner_id, refresh)
     except AuthenticationFailed as e:
         raise click.UsageError(e)
-    except ServerError as e:
-        raise click.UsageError(e)
     access_token = token.get('access_token')
-
     click.echo(access_token)
 
 
