@@ -20,17 +20,19 @@ output_option = click.option('-o', '--output', type=click.Choice(['text', 'json'
 def print_version(ctx, param, value):
     if not value or ctx.resilient_parsing:
         return
-    click.echo('Zign {}'.format(zign.__version__))
+    click.echo('{command} {version}'.format(command=ctx.info_name, version=zign.__version__));
     ctx.exit()
 
 
-@click.group(cls=AliasedGroup, context_settings=CONTEXT_SETTINGS)
+@click.group(cls=AliasedGroup, invoke_without_command=True, context_settings=CONTEXT_SETTINGS)
 @click.option('-V', '--version', is_flag=True, callback=print_version, expose_value=False, is_eager=True,
               help='Print the current version number and exit.')
 @click.pass_context
 def cli(ctx):
-    ctx.obj = stups_cli.config.load_config('zign')
+    ctx.obj = stups_cli.config.load_config('ztoken')
 
+    if not ctx.invoked_subcommand:
+        ctx.invoke(token)
 
 def format_expires(token: dict):
     now = time.time()
@@ -40,15 +42,17 @@ def format_expires(token: dict):
 
 @cli.command('list')
 @output_option
-@click.pass_obj
-def list_tokens(obj, output):
+def list_tokens(output):
     '''List tokens'''
     data = get_tokens()
 
     rows = []
     for key, val in sorted(data.items()):
+        access_token = val.get('access_token')
+        if output == 'text' and len(access_token) > 36:
+            access_token = access_token[:33] + '...' 
         rows.append({'name': key,
-                     'access_token': val.get('access_token'),
+                     'access_token': access_token,
                      'scope': val.get('scope'),
                      'creation_time': val.get('creation_time'),
                      'expires_in': format_expires(val)})
@@ -95,7 +99,7 @@ def token(obj, scope, url, realm, name, user, password, insecure, refresh):
         raise click.UsageError(e)
     access_token = token.get('access_token')
 
-    print(access_token)
+    click.echo(access_token)
 
 
 def main():
