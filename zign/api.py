@@ -38,8 +38,7 @@ SUCCESS_PAGE = '''<!DOCTYPE HTML>
 EXTRACT_TOKEN_PAGE = '''<!DOCTYPE HTML>
 <html lang="en-US">
   <head>
-    <!-- fill out the blanks please -->
-    <title>...</title>
+    <title>Redirecting...</title>
     <style>
         body {{
             font-family: sans-serif;
@@ -70,7 +69,7 @@ EXTRACT_TOKEN_PAGE = '''<!DOCTYPE HTML>
   </head>
   <body>
     <p style="display:none;" id="error">
-        Please put a nice message here.
+        Redirecting...
     </p>
   </body>
 </html>'''
@@ -133,7 +132,7 @@ class ClientRedirectHandler(tools.ClientRedirectHandler):
             self.wfile.write(page.encode('utf-8'))
 
 
-def get_config(config_module=None, override=dict()):
+def get_config(config_module=None, override=None):
     '''Returns the specified module's configuration. Defaults to ztoken.
 
     Prompts for configuration values if ztoken module config is not present or has missing values.
@@ -141,6 +140,7 @@ def get_config(config_module=None, override=dict()):
     If override is present, only prompts for non-existent values.
     '''
 
+    override = override or {}
     if config_module:
         return stups_cli.config.load_config(config_module)
 
@@ -164,8 +164,8 @@ def get_config(config_module=None, override=dict()):
     if 'client_id' not in override and 'client_id' not in config:
         config['client_id'] = click.prompt('Please enter the client ID')
 
-    if 'partner_id' not in override and 'partner_id' not in config:
-        config['partner_id'] = click.prompt('Please enter the business partner ID')
+    if 'business_partner_id' not in override and 'business_partner_id' not in config:
+        config['business_partner_id'] = click.prompt('Please enter the business partner ID')
 
     if config != old_config:
         stups_cli.config.store_config(config, 'ztoken')
@@ -229,7 +229,7 @@ def store_token(name: str, result: dict):
         yaml.safe_dump(data, fd)
 
 
-def get_token_implicit_flow(name=None, scope=None, auth_url=None, client_id=None, partner_id=None,
+def get_token_implicit_flow(name=None, scope=None, auth_url=None, client_id=None, business_partner_id=None,
                             refresh=False):
     '''Gets a Platform IAM access token using browser redirect flow'''
 
@@ -239,10 +239,10 @@ def get_token_implicit_flow(name=None, scope=None, auth_url=None, client_id=None
         if existing_token and existing_token.get('access_token').count('.') >= 2:
             return existing_token
 
-    override = {'name':         name,
-                'auth_url':     auth_url,
-                'client_id':    client_id,
-                'partner_id':   partner_id}
+    override = {'name':                 name,
+                'auth_url':             auth_url,
+                'client_id':            client_id,
+                'business_partner_id':  business_partner_id}
     config = get_config(override=override)
 
     success = False
@@ -265,7 +265,7 @@ def get_token_implicit_flow(name=None, scope=None, auth_url=None, client_id=None
     if success:
         params = {'response_type':          'token',
                   'scope':                  config['scope'],
-                  'business_partner_id':    config['partner_id'],
+                  'business_partner_id':    config['business_partner_id'],
                   'client_id':              config['client_id'],
                   'redirect_uri':           'http://localhost:{}'.format(port_number)}
 

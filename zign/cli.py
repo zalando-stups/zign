@@ -49,8 +49,6 @@ def list_tokens(output):
     rows = []
     for key, val in sorted(data.items()):
         access_token = val.get('access_token')
-        if output == 'text' and len(access_token) > 36:
-            access_token = access_token[:33] + '...'
         rows.append({'name': key,
                      'access_token': access_token,
                      'scope': val.get('scope'),
@@ -59,7 +57,7 @@ def list_tokens(output):
 
     with OutputFormat(output):
         print_table('name access_token scope creation_time expires_in'.split(), rows,
-                    titles={'creation_time': 'Created'})
+                    titles={'creation_time': 'Created'}, max_column_widths=36)
 
 
 @cli.command('delete')
@@ -81,15 +79,15 @@ def delete_token(obj, name):
 @cli.command()
 @click.option('-n', '--name', help='Custom token name (will be stored)', metavar='TOKEN_NAME')
 @click.option('-s', '--scope', help='Scope to request access to', metavar='SCOPE')
-@click.option('-a', '--auth_url', help='Auth URL to generate access token', metavar='AUTH_URL')
-@click.option('-c', '--client_id', help='Client ID to use', metavar='CLIENT_ID')
-@click.option('-p', '--partner_id', help='Business Partner ID to use', metavar='PARTNER_ID')
+@click.option('-a', '--auth-url', help='Auth URL to generate access token', metavar='AUTH_URL')
+@click.option('-c', '--client-id', help='Client ID to use', metavar='CLIENT_ID')
+@click.option('-p', '--business-partner-id', help='Business Partner ID to use', metavar='PARTNER_ID')
 @click.option('-r', '--refresh', help='Force refresh of the access token', is_flag=True, default=False)
-def token(name, scope, auth_url, client_id, partner_id, refresh):
+def token(name, scope, auth_url, client_id, business_partner_id, refresh):
     '''Create a new Platform IAM token or use an existing one.'''
 
     try:
-        token = get_token_implicit_flow(name, scope, auth_url, client_id, partner_id, refresh)
+        token = get_token_implicit_flow(name, scope, auth_url, client_id, business_partner_id, refresh)
     except AuthenticationFailed as e:
         raise click.UsageError(e)
     access_token = token.get('access_token')
