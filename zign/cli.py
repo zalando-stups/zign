@@ -80,22 +80,22 @@ def delete_token(obj, name):
 
 
 @cli.command()
-@click.argument('scope', nargs=-1)
-@click.option('--url', help='URL to generate access token', metavar='URI')
-@click.option('--realm', help='Use custom OAuth2 realm', metavar='NAME')
 @click.option('-n', '--name', help='Custom token name (will be stored)', metavar='TOKEN_NAME')
-@click.option('-U', '--user', help='Username to use for authentication', envvar='ZIGN_USER', metavar='NAME')
-@click.option('-p', '--password', help='Password to use for authentication', envvar='ZIGN_PASSWORD', metavar='PWD')
-@click.option('--insecure', help='Do not verify SSL certificate', is_flag=True, default=False)
+@click.option('-s', '--scope', help='Scope to request access to', metavar='SCOPE')
+@click.option('-a', '--auth-url', help='Auth URL to generate access token', metavar='AUTH_URL')
+@click.option('-c', '--client-id', help='Client ID to use', metavar='CLIENT_ID')
+@click.option('-b', '--business-partner-id', help='Auth URL to generate access token', metavar='AUTH_URL')
 @click.option('-r', '--refresh', help='Force refresh of the access token', is_flag=True, default=False)
-@click.pass_obj
-def token(obj, scope, url, realm, name, user, password, insecure, refresh):
-    '''Create a new token or use an existing one'''
+def token(name, scope, auth_url, realm, name, user, password, insecure, refresh):
+    '''Create a new Platform IAM token or use an existing one.'''
 
-    user = user or obj.get('user') or os.getenv('USER')
+    token = get_token_implicit_flow(name=None, scope=None, auth_url=None, client_id=None, business_partner_id=None,
+                                    refresh=False):
 
     try:
         token = get_named_token(scope, realm, name, user, password, url, insecure, refresh, prompt=True)
+    except AuthenticationFailed as e:
+        raise click.UsageError(e)
     except ServerError as e:
         raise click.UsageError(e)
     access_token = token.get('access_token')

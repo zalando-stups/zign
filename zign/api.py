@@ -41,31 +41,31 @@ EXTRACT_TOKEN_PAGE = '''<!DOCTYPE HTML>
     <!-- fill out the blanks please -->
     <title>...</title>
     <style>
-        body {
+        body {{
             font-family: sans-serif;
-        }
-        #error {
+        }}
+        #error {{
             color: red;
-        }
+        }}
     </style>
     <script>
-        (function() {
-            function parseQueryString(qs) {
-                const result = {}
-                for(const part of qs.split("&")) {
+        (function() {{
+            function parseQueryString(qs) {{
+                const result = {{}}
+                for(const part of qs.split("&")) {{
                     const [key, val = ""] = part.split("=")
                     result[decodeURIComponent(key)] = decodeURIComponent(val)
-                }
+                }}
                 return result
-            }
+            }}
             const fragment = window.location.hash.substring(1)
             const params = parseQueryString(fragment)
-            if (params.access_token) {
-                window.location.href = "http://localhost:8081/?" + fragment
-            } else {
+            if (params.access_token) {{
+                window.location.href = "http://localhost:{port}/?" + fragment
+            }} else {{
                 document.getElementById("error").style = "display: block;"
-            }
-        })();
+            }}
+        }})();
     </script>
   </head>
   <body>
@@ -123,7 +123,7 @@ class ClientRedirectHandler(tools.ClientRedirectHandler):
         query_string = urlparse(self.path).query
 
         if not query_string:
-            self.wfile.write(EXTRACT_TOKEN_PAGE.encode('utf-8'))
+            self.wfile.write(EXTRACT_TOKEN_PAGE.format(port=self.server.server_port).encode('utf-8'))
         else:
             self.server.query_params = parse_qs(query_string)
             if 'access_token' in self.server.query_params:
@@ -133,8 +133,43 @@ class ClientRedirectHandler(tools.ClientRedirectHandler):
             self.wfile.write(page.encode('utf-8'))
 
 
-def get_config():
-    return stups_cli.config.load_config('zign')
+def get_config(config_module=None):
+    '''Returns the specified module's configuration. Defaults to ztoken.
+
+    Prompts for configuration values if ztoken module config is not present os has missing values.
+    '''
+
+    if config_module:
+        return stups_cli.config.load_config(config_module)
+
+    config = stups_cli.config.load_config('ztoken')
+
+    while not 'auth_url' in config:
+        auth_url = click.prompt('Please enter the OAuth access token service URL', type=UrlType())
+
+        try:
+            requests.get(auth_url, timeout=5)
+        except RequestException:
+            error('Could not reach {}'.format(auth_url))
+            auth_url = None
+
+        config['auth_url'] = auth_url
+
+    while not 'scope' in config:
+        scope = click.prompt('Please enter the scope to be requested')
+        config['scope'] = scope
+
+    while not 'client_id' in config:
+        client_id = click.prompt('Please enter the client ID')
+        config['client_id'] = client_id
+
+    while not 'business_partner_id' in config:
+        business_partner_id = click.prompt('Please enter the business partner ID')
+        config['business_partner_id'] = business_partner_id
+
+    stups_cli.config.store_config(config, 'ztoken')
+
+    return config
 
 
 def get_tokens():
@@ -148,7 +183,7 @@ def get_tokens():
 
 def get_new_token(realm: str, scope: list, user, password, url=None, insecure=False):
     if not url:
-        config = get_config()
+        config = get_config('zign')
         url = config.get('url')
     params = {'json': 'true'}
     if realm:
@@ -192,9 +227,9 @@ def store_token(name: str, result: dict):
         yaml.safe_dump(data, fd)
 
 
-def get_token_browser_redirect(name, refresh=False, auth_url=None, scope=None, client_id=None,
-                               business_partner_id=None):
-    '''Get a named access token and opens a browser to authenticate through the configured auth URL'''
+def get_token_implicit_flow(name=None, scope=None, auth_url=None, client_id=None, business_partner_id=None,
+                            refresh=False):
+    '''Gets a Platform IAM access token using browser redirect flow'''
 
     if name and not refresh:
         existing_token = get_existing_token(name)
@@ -204,37 +239,8 @@ def get_token_browser_redirect(name, refresh=False, auth_url=None, scope=None, c
 
     config = get_config()
 
-    auth_url = auth_url or config.get('auth_url')
-    scope = scope or config.get('scope')
-    client_id = client_id or config.get('client_id')
-    business_partner_id = business_partner_id or config.get('business_partner_id')
-
-    while not auth_url:
-        auth_url = click.prompt('Please enter the OAuth access token service URL', type=UrlType())
-
-        try:
-            requests.get(auth_url, timeout=5)
-        except RequestException:
-            error('Could not reach {}'.format(auth_url))
-            auth_url = None
-
-        config['auth_url'] = auth_url
-
-    while not scope:
-        scope = click.prompt('Please enter the scope to be requested')
-        config['scope'] = scope
-
-    while not client_id:
-        client_id = click.prompt('Please enter the client ID')
-        config['client_id'] = client_id
-
-    while not business_partner_id:
-        business_partner_id = click.prompt('Please enter the business partner ID')
-        config['business_partner_id'] = business_partner_id
-
-    stups_cli.config.store_config(config, 'zign')
-
     success = False
+    # Must match redirect URIs in client configuration (http://localhost:8081-8181)
     port_number = 8081
     max_port_number = port_number + 100
 
@@ -260,9 +266,9 @@ def get_token_browser_redirect(name, refresh=False, auth_url=None, scope=None, c
         param_list = ['{}={}'.format(key, params[key]) for key in params]
         param_string = '&'.join(param_list)
 
-        parsed_auth_url = urlparse(auth_url)
-        browser_url = urlunsplit((parsed_auth_url.scheme, parsed_auth_url.netloc, parsed_auth_url.path,
-                                 param_string, ''))
+        parsed_auth_url = urlparse(config['auth_url'])
+        browser_url = urlunsplit((parsed_auth_url.scheme, parsed_auth_url.netloc, parsed_auth_url.path, param_string,
+                      ''))
 
         webbrowser.open(browser_url, new=1, autoraise=True)
         click.echo('Your browser has been opened to visit:\n\n\t{}\n'.format(browser_url))
@@ -302,7 +308,7 @@ def get_named_token(scope, realm, name, user, password, url=None,
         if access_token:
             return {'access_token': access_token}
 
-    config = get_config()
+    config = get_config('zign')
 
     url = url or config.get('url')
 
@@ -384,7 +390,7 @@ def get_token(name: str, scopes: list):
     if access_token:
         return access_token
 
-    config = get_config()
+    config = get_config('zign')
     user = config.get('user') or os.getenv('ZIGN_USER') or os.getenv('USER')
 
     if not user:
