@@ -79,7 +79,8 @@ def delete_token(obj, name):
 @cli.command()
 @click.option('-n', '--name', help='Custom token name (will be stored)', metavar='TOKEN_NAME')
 @click.option('-s', '--scope', help='Scope to request access to', metavar='SCOPE')
-@click.option('-a', '--authorize-url', help='OAuth 2 Authorization Endpoint URL to generate access token', metavar='AUTH_URL')
+@click.option('-a', '--authorize-url', help='OAuth 2 Authorization Endpoint URL to generate access token',
+              metavar='AUTH_URL')
 @click.option('-c', '--client-id', help='Client ID to use', metavar='CLIENT_ID')
 @click.option('-p', '--business-partner-id', help='Business Partner ID to use', metavar='PARTNER_ID')
 @click.option('-r', '--refresh', help='Force refresh of the access token', is_flag=True, default=False)

@@ -277,8 +277,8 @@ def get_token_implicit_flow(name=None, scope=None, authorize_url=None, client_id
         param_list = ['{}={}'.format(key, params[key]) for key in params]
         param_string = '&'.join(param_list)
         parsed_authorize_url = urlparse(config['authorize_url'])
-        browser_url = urlunsplit((parsed_authorize_url.scheme, parsed_authorize_url.netloc, parsed_authorize_url.path, param_string,
-                                  ''))
+        browser_url = urlunsplit((parsed_authorize_url.scheme, parsed_authorize_url.netloc, parsed_authorize_url.path,
+                                  param_string, ''))
 
         webbrowser.open(browser_url, new=1, autoraise=True)
         click.echo('Your browser has been opened to visit:\n\n\t{}\n'.format(browser_url))
