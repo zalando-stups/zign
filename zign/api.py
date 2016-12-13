@@ -154,14 +154,14 @@ def get_config(config_module=None, override=None):
     config = stups_cli.config.load_config('ztoken')
     old_config = config.copy()
 
-    while 'auth_url' not in override and 'auth_url' not in config:
-        config['auth_url'] = click.prompt('Please enter the OAuth Authorization Endpoint URL', type=UrlType())
+    while 'authorize_url' not in override and 'authorize_url' not in config:
+        config['authorize_url'] = click.prompt('Please enter the OAuth Authorization Endpoint URL', type=UrlType())
 
         try:
-            requests.get(config['auth_url'], timeout=5)
+            requests.get(config['authorize_url'], timeout=5)
         except RequestException:
-            error('Could not reach {}'.format(config['auth_url']))
-            del config['auth_url']
+            error('Could not reach {}'.format(config['authorize_url']))
+            del config['authorize_url']
 
     if 'scope' not in override and 'scope' not in config:
         config['scope'] = click.prompt('Please enter the scope to be requested')
@@ -234,7 +234,7 @@ def store_token(name: str, result: dict):
         yaml.safe_dump(data, fd)
 
 
-def get_token_implicit_flow(name=None, scope=None, auth_url=None, client_id=None, business_partner_id=None,
+def get_token_implicit_flow(name=None, scope=None, authorize_url=None, client_id=None, business_partner_id=None,
                             refresh=False):
     '''Gets a Platform IAM access token using browser redirect flow'''
 
@@ -245,7 +245,7 @@ def get_token_implicit_flow(name=None, scope=None, auth_url=None, client_id=None
             return existing_token
 
     override = {'name':                 name,
-                'auth_url':             auth_url,
+                'authorize_url':             authorize_url,
                 'client_id':            client_id,
                 'business_partner_id':  business_partner_id}
     config = get_config(override=override)
@@ -276,8 +276,8 @@ def get_token_implicit_flow(name=None, scope=None, auth_url=None, client_id=None
 
         param_list = ['{}={}'.format(key, params[key]) for key in params]
         param_string = '&'.join(param_list)
-        parsed_auth_url = urlparse(config['auth_url'])
-        browser_url = urlunsplit((parsed_auth_url.scheme, parsed_auth_url.netloc, parsed_auth_url.path, param_string,
+        parsed_authorize_url = urlparse(config['authorize_url'])
+        browser_url = urlunsplit((parsed_authorize_url.scheme, parsed_authorize_url.netloc, parsed_authorize_url.path, param_string,
                                   ''))
 
         webbrowser.open(browser_url, new=1, autoraise=True)
