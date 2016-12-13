@@ -7,7 +7,7 @@ from clickclick import AliasedGroup, print_table, OutputFormat
 import zign
 import stups_cli.config
 from .api import get_token_implicit_flow, get_tokens, AuthenticationFailed
-from .config import TOKENS_FILE_PATH
+from .config import CONFIG_NAME, TOKENS_FILE_PATH
 
 
 CONTEXT_SETTINGS = dict(help_option_names=['-h', '--help'])
@@ -28,7 +28,7 @@ def print_version(ctx, param, value):
               help='Print the current version number and exit.')
 @click.pass_context
 def cli(ctx):
-    ctx.obj = stups_cli.config.load_config('zalando-token-cli')
+    ctx.obj = stups_cli.config.load_config(CONFIG_NAME)
 
     if not ctx.invoked_subcommand:
         ctx.invoke(token)
