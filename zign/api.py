@@ -147,7 +147,7 @@ def get_config(config_module=None, override=None):
 
     # Make sure no keys with empty values are present
     override = {k: v for (k, v) in override.items() if v}
-    config = stups_cli.config.load_config('ztoken')
+    config = stups_cli.config.load_config('zalando-token-cli')
     old_config = config.copy()
 
     while 'authorize_url' not in override and 'authorize_url' not in config:
@@ -169,7 +169,7 @@ def get_config(config_module=None, override=None):
         config['business_partner_id'] = click.prompt('Please enter the business partner ID')
 
     if config != old_config:
-        stups_cli.config.store_config(config, 'ztoken')
+        stups_cli.config.store_config(config, 'zalando-token-cli')
 
     config.update(override)
     return config

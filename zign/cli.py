@@ -28,7 +28,7 @@ def print_version(ctx, param, value):
               help='Print the current version number and exit.')
 @click.pass_context
 def cli(ctx):
-    ctx.obj = stups_cli.config.load_config('ztoken')
+    ctx.obj = stups_cli.config.load_config('zalando-token-cli')
 
     if not ctx.invoked_subcommand:
         ctx.invoke(token)
