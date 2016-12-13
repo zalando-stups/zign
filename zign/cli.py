@@ -57,7 +57,7 @@ def list_tokens(output):
 
     with OutputFormat(output):
         print_table('name access_token scope creation_time expires_in'.split(), rows,
-                    titles={'creation_time': 'Created'}, max_column_widths=36)
+                    titles={'creation_time': 'Created'}, max_column_widths={'access_token': 36})
 
 
 @cli.command('delete')
