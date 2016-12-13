@@ -45,6 +45,7 @@ EXTRACT_TOKEN_PAGE = '''<!DOCTYPE HTML>
         }}
         #error {{
             color: red;
+            display: none;
         }}
     </style>
     <script>
@@ -72,6 +73,9 @@ EXTRACT_TOKEN_PAGE = '''<!DOCTYPE HTML>
         <p>Your browser does not support Javascript! Please enable it or switch to a Javascript enabled browser.</p>
     </noscript>
     <p>Redirecting...</p>
+    <p id="error">
+        Error: no access token.
+    </p>
   </body>
 </html>'''
 
