@@ -66,16 +66,12 @@ EXTRACT_TOKEN_PAGE = '''<!DOCTYPE HTML>
             }}
         }})();
     </script>
-    <noscript>
-        <p style="display:none;" id="error">
-            Your browser does not support Javascript! Please enable it or switch to a Javascript enabled browser.
-        </p>
-    </noscript>
   </head>
   <body>
-    <p style="display:none;" id="error">
-        Redirecting...
-    </p>
+    <noscript>
+        <p>Your browser does not support Javascript! Please enable it or switch to a Javascript enabled browser.</p>
+    </noscript>
+    <p>Redirecting...</p>
   </body>
 </html>'''
 
