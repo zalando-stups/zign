@@ -22,6 +22,7 @@ def read_version(package):
         exec(fd.read(), data)
     return data['__version__']
 
+
 NAME = 'stups-zign'
 MAIN_PACKAGE = 'zign'
 VERSION = read_version(MAIN_PACKAGE)
@@ -49,7 +50,11 @@ CLASSIFIERS = [
     'Programming Language :: Python :: Implementation :: CPython',
 ]
 
-CONSOLE_SCRIPTS = ['zign = zign.cli:main']
+CONSOLE_SCRIPTS = [
+    # TODO: deprecate "zign"
+    'ztoken = zign.cli:main',
+    'zign = zign.cli_zign:main'
+]
 
 
 class PyTest(TestCommand):

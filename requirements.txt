@@ -1,6 +1,7 @@
 clickclick>=1.0
 keyring
 keyrings.alt
+oauth2client>=4.0.0
 PyYAML
 requests
 stups-tokens
