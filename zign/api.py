@@ -163,9 +163,6 @@ def get_config(config_module=None, override=None):
             error('Could not reach {}'.format(config['authorize_url']))
             del config['authorize_url']
 
-    if 'scope' not in override and 'scope' not in config:
-        config['scope'] = click.prompt('Please enter the scope to be requested')
-
     if 'client_id' not in override and 'client_id' not in config:
         config['client_id'] = click.prompt('Please enter the client ID')
 
@@ -234,7 +231,7 @@ def store_token(name: str, result: dict):
         yaml.safe_dump(data, fd)
 
 
-def get_token_implicit_flow(name=None, scope=None, authorize_url=None, client_id=None, business_partner_id=None,
+def get_token_implicit_flow(name=None, authorize_url=None, client_id=None, business_partner_id=None,
                             refresh=False):
     '''Gets a Platform IAM access token using browser redirect flow'''
 
@@ -269,7 +266,6 @@ def get_token_implicit_flow(name=None, scope=None, authorize_url=None, client_id
 
     if success:
         params = {'response_type':          'token',
-                  'scope':                  config['scope'],
                   'business_partner_id':    config['business_partner_id'],
                   'client_id':              config['client_id'],
                   'redirect_uri':           'http://localhost:{}'.format(port_number)}
@@ -295,7 +291,7 @@ def get_token_implicit_flow(name=None, scope=None, authorize_url=None, client_id
                  'refresh_token':   httpd.query_params['refresh_token'][0],
                  'expires_in':      int(httpd.query_params['expires_in'][0]),
                  'token_type':      httpd.query_params['token_type'][0],
-                 'scope':           httpd.query_params['scope'][0]}
+                 'scope':           ''}
         if name:
             token['name'] = name
             store_token(name, token)
