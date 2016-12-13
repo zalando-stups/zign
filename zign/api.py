@@ -155,7 +155,7 @@ def get_config(config_module=None, override=None):
     old_config = config.copy()
 
     while 'auth_url' not in override and 'auth_url' not in config:
-        config['auth_url'] = click.prompt('Please enter the OAuth access token service URL', type=UrlType())
+        config['auth_url'] = click.prompt('Please enter the OAuth Authorization Endpoint URL', type=UrlType())
 
         try:
             requests.get(config['auth_url'], timeout=5)
