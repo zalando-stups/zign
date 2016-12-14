@@ -85,7 +85,6 @@ ERROR_PAGE = '''<!DOCTYPE HTML>
     <title>Authentication Failed - Zign</title>
   </head>
   <body>
-    <p><font face=arial>You are now authenticated with Zign.</font></p>
     <p><font face=arial>The authentication flow did not complete successfully. Please try again. You may close this
     window.</font></p>
   </body>
