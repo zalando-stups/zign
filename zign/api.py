@@ -281,10 +281,10 @@ def get_token_implicit_flow(name=None, authorize_url=None, client_id=None, busin
     else:
         raise AuthenticationFailed('Failed to launch local server')
 
-    # Handle first request, which will redirect to Javascript
-    httpd.handle_request()
-    # Handle next request, with token
-    httpd.handle_request()
+    while not httpd.query_params:
+        # Handle first request, which will redirect to Javascript
+        # Handle next request, with token
+        httpd.handle_request()
 
     if 'access_token' in httpd.query_params:
         token = {'access_token':    httpd.query_params['access_token'][0],
