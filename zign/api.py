@@ -277,7 +277,7 @@ def get_token_implicit_flow(name=None, authorize_url=None, client_id=None, busin
                                   param_string, ''))
 
         webbrowser.open(browser_url, new=1, autoraise=True)
-        click.echo('Your browser has been opened to visit:\n\n\t{}\n'.format(browser_url))
+        info('Your browser has been opened to visit:\n\n\t{}\n'.format(browser_url))
     else:
         raise AuthenticationFailed('Failed to launch local server')
 
