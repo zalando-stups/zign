@@ -62,8 +62,15 @@ def test_get_token_configuration_error(monkeypatch):
     monkeypatch.setattr('tokens.get', get_token)
     monkeypatch.setattr('stups_cli.config.load_config', lambda x: {})
 
-    with pytest.raises(zign.api.ConfigurationError):
+    with pytest.raises(zign.api.ConfigurationError) as exception:
         zign.api.get_token('mytok', ['myscope'])
+
+
+def test_configuration_error():
+    with pytest.raises(zign.api.ConfigurationError) as exception:
+        raise zign.api.ConfigurationError('Slartibartfast')
+
+    assert 'Configuration error: Slartibartfast' in str(exception)
 
 
 def test_get_token_service_success(monkeypatch):
