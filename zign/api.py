@@ -7,7 +7,6 @@ import time
 import tokens
 import requests
 import socket
-import sys
 import webbrowser
 import yaml
 
@@ -332,7 +331,7 @@ def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, clien
         finally:
             os.dup2(saved_stdout, 1)
             os.dup2(saved_stderr, 2)
-        
+
         info('Your browser has been opened to visit:\n\n\t{}\n'.format(browser_url))
 
     else:
