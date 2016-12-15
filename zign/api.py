@@ -10,7 +10,7 @@ import socket
 import webbrowser
 import yaml
 
-from .config import KEYRING_KEY, CONFIG_NAME, TOKENS_FILE_PATH
+from .config import KEYRING_KEY, OLD_CONFIG_NAME, CONFIG_NAME, TOKENS_FILE_PATH
 from oauth2client import tools
 from requests import RequestException
 from urllib.parse import parse_qs
@@ -143,14 +143,15 @@ def get_config(config_module=None, override=None):
 
     If override is present, only prompts for non-existent values.
     '''
+    if not config_module or config_module == OLD_CONFIG_NAME:
+        # backwards compatible (used by Piu!):
+        return stups_cli.config.load_config(OLD_CONFIG_NAME)
 
     override = override or {}
-    if config_module:
-        return stups_cli.config.load_config(config_module)
 
     # Make sure no keys with empty values are present
     override = {k: v for (k, v) in override.items() if v}
-    config = stups_cli.config.load_config(CONFIG_NAME)
+    config = stups_cli.config.load_config(config_module)
     old_config = config.copy()
 
     while 'authorize_url' not in override and 'authorize_url' not in config:
@@ -169,7 +170,7 @@ def get_config(config_module=None, override=None):
         config['business_partner_id'] = click.prompt('Please enter the business partner ID')
 
     if config != old_config:
-        stups_cli.config.store_config(config, CONFIG_NAME)
+        stups_cli.config.store_config(config, config_module)
 
     config.update(override)
     return config
@@ -186,7 +187,7 @@ def get_tokens():
 
 def get_new_token(realm: str, scope: list, user, password, url=None, insecure=False):
     if not url:
-        config = get_config('zign')
+        config = get_config(OLD_CONFIG_NAME)
         url = config.get('url')
     params = {'json': 'true'}
     if realm:
@@ -244,7 +245,7 @@ def get_token_implicit_flow(name=None, authorize_url=None, client_id=None, busin
                 'authorize_url':             authorize_url,
                 'client_id':            client_id,
                 'business_partner_id':  business_partner_id}
-    config = get_config(override=override)
+    config = get_config(CONFIG_NAME, override=override)
 
     success = False
     # Must match redirect URIs in client configuration (http://localhost:8081-8181)
@@ -305,7 +306,7 @@ def get_named_token(scope, realm, name, user, password, url=None,
 
     if name and not refresh:
         existing_token = get_existing_token(name)
-        if existing_token and '.' not in existing_token.get('access_token'):
+        if existing_token:
             return existing_token
 
     if name and not realm:
@@ -313,7 +314,7 @@ def get_named_token(scope, realm, name, user, password, url=None,
         if access_token:
             return {'access_token': access_token}
 
-    config = get_config('zign')
+    config = get_config(OLD_CONFIG_NAME)
 
     url = url or config.get('url')
 
@@ -328,7 +329,7 @@ def get_named_token(scope, realm, name, user, password, url=None,
 
         config['url'] = url
 
-    stups_cli.config.store_config(config, 'zign')
+    stups_cli.config.store_config(config, OLD_CONFIG_NAME)
 
     password = password or keyring.get_password(KEYRING_KEY, user)
 
@@ -395,7 +396,7 @@ def get_token(name: str, scopes: list):
     if access_token:
         return access_token
 
-    config = get_config('zign')
+    config = get_config(OLD_CONFIG_NAME)
     user = config.get('user') or os.getenv('ZIGN_USER') or os.getenv('USER')
 
     if not user:

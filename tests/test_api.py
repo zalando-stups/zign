@@ -97,3 +97,11 @@ def test_get_named_token_services(monkeypatch):
     monkeypatch.setattr('tokens.get', lambda x: 'svcmytok123')
     tok = zign.api.get_named_token(scope=['myscope'], realm=None, name='mytok', user='myusr', password='mypw')
     assert tok['access_token'] == 'svcmytok123'
+
+
+def test_backwards_compatible_get_config(monkeypatch):
+    load_config = MagicMock()
+    load_config.return_value = {'url': 'http://localhost'}
+    monkeypatch.setattr('stups_cli.config.load_config', load_config)
+    assert {'url': 'http://localhost'} == zign.api.get_config()
+    load_config.assert_called_with('zign')
