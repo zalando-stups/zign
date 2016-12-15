@@ -234,18 +234,11 @@ def store_token(name: str, result: dict):
     data[name] = result
     data[name]['creation_time'] = time.time()
 
-    dir_path = os.path.dirname(TOKENS_FILE_PATH)
-    if dir_path:
-        os.makedirs(dir_path, exist_ok=True)
-
-    with open(TOKENS_FILE_PATH, 'w') as fd:
-        yaml.safe_dump(data, fd)
+    store_config(data, TOKENS_FILE_PATH)
 
 
-def store_refresh_token(refresh_token: str):
-    data = {'refresh_token': refresh_token}
-
-    dir_path = os.path.dirname(REFRESH_TOKEN_FILE_PATH)
+def store_config(data: dict, path: str):
+    dir_path = os.path.dirname(path)
     if dir_path:
         os.makedirs(dir_path, exist_ok=True)
 
@@ -290,7 +283,7 @@ def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, clien
                 store_token(name, token)
 
             # Store the latest refresh token
-            store_refresh_token(token['refresh_token'])
+            store_config({'refresh_token': token['refresh_token']}, REFRESH_TOKEN_FILE_PATH)
             return token
         except RequestException as exception:
             error(exception)
@@ -342,7 +335,7 @@ def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, clien
                  'token_type':      httpd.query_params['token_type'][0],
                  'scope':           ''}
 
-        store_refresh_token(token['refresh_token'])
+        store_config({'refresh_token': token['refresh_token']}, REFRESH_TOKEN_FILE_PATH)
         stups_cli.config.store_config(config, CONFIG_NAME)
 
         if name:
