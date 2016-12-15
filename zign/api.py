@@ -257,8 +257,8 @@ def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, clien
                    'business_partner_id':   config['business_partner_id'],
                    'refresh_token':         config['refresh_token']}
         try:
-            r = requests.post(config['token_url'], data=payload)
-            r.raise_for_status
+            r = requests.post(config['token_url'], timeout=20, data=payload)
+            r.raise_for_status()
 
             token = r.json()
             token['scope'] = ''
