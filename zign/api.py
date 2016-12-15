@@ -166,10 +166,10 @@ def get_config(config_module=None, override=None):
                 del config[oauth2_url]
 
     if 'client_id' not in override and 'client_id' not in config:
-        config['client_id'] = click.prompt('Please enter the client ID')
+        config['client_id'] = click.prompt('Please enter the OAuth 2 Client ID')
 
     if 'business_partner_id' not in override and 'business_partner_id' not in config:
-        config['business_partner_id'] = click.prompt('Please enter the business partner ID')
+        config['business_partner_id'] = click.prompt('Please enter the Business Partner ID')
 
     if config != old_config:
         stups_cli.config.store_config_ztoken(config, config_module)
