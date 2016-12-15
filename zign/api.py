@@ -172,7 +172,7 @@ def get_config(config_module=None, override=None):
         config['business_partner_id'] = click.prompt('Please enter the Business Partner ID')
 
     if config != old_config:
-        stups_cli.config.store_config_ztoken(config, config_module)
+        store_config_ztoken(config, config_module)
 
     config.update(override)
     return config
@@ -261,8 +261,8 @@ def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, clien
     data = load_config_ztoken(REFRESH_TOKEN_FILE_PATH)
 
     # Always try with refresh token first
-    if data:
-        refresh_token = data['refresh_token']
+    refresh_token = data.get('refresh_token')
+    if refresh_token:
         payload = {'grant_type':            'refresh_token',
                    'client_id':             config['client_id'],
                    'business_partner_id':   config['business_partner_id'],
