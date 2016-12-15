@@ -66,17 +66,12 @@ EXTRACT_TOKEN_PAGE = '''<!DOCTYPE HTML>
                           return result;
                         }}, {{}});
             }}
-            var fragment = window.location.href.split("#");
-            if (fragment.length === 2) {{
-              var query = fragment[1]
-              var params = parseQueryString(query);
-              if (params.access_token) {{
-                  window.location.href = "http://localhost:{port}/?" + fragment;
-              }} else {{
-                  displayError("Error: No access_token in URL.")
-              }}
+            var query = window.location.hash.substring(1);
+            var params = parseQueryString(query);
+            if (params.access_token) {{
+                window.location.href = "http://localhost:{port}/?" + fragment;
             }} else {{
-              displayError("Error: Multiple # found in URL, something is wrong.")
+                displayError("Error: No access_token in URL.")
             }}
         }})();
     </script>
