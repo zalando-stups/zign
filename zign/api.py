@@ -45,25 +45,38 @@ EXTRACT_TOKEN_PAGE = '''<!DOCTYPE HTML>
         }}
         #error {{
             color: red;
-            display: none;
         }}
     </style>
     <script>
-        (function() {{
-            function parseQueryString(qs) {{
-                const result = {{}}
-                for(const part of qs.split("&")) {{
-                    const [key, val = ""] = part.split("=")
-                    result[decodeURIComponent(key)] = decodeURIComponent(val)
-                }}
-                return result
+        (function extractFragmentQueryString() {{
+            function displayError(message) {{
+              var errorElement = document.getElementById("error");
+              errorElement.textContent = message || "Unknown error";
             }}
-            const fragment = window.location.hash.substring(1)
-            const params = parseQueryString(fragment)
-            if (params.access_token) {{
-                window.location.href = "http://localhost:{port}/?" + fragment
+
+            function parseQueryString(qs) {{
+                return qs.split("&")
+                        .reduce(function (result, param) {{
+                          var split = param.split("=");
+                          if (split.length === 2) {{
+                            var key = decodeURIComponent(split[0]);
+                            var val = decodeURIComponent(split[1]);
+                            result[key] = val;
+                          }}
+                          return result;
+                        }}, {{}});
+            }}
+            var fragment = window.location.href.split("#");
+            if (fragment.length === 2) {{
+              var query = fragment[1]
+              var params = parseQueryString(query);
+              if (params.access_token) {{
+                  window.location.href = "http://localhost:{port}/?" + fragment;
+              }} else {{
+                  displayError("Error: No access_token in URL.")
+              }}
             }} else {{
-                document.getElementById("error").style = "display: block;"
+              displayError("Error: Multiple # found in URL, something is wrong.")
             }}
         }})();
     </script>
@@ -73,9 +86,7 @@ EXTRACT_TOKEN_PAGE = '''<!DOCTYPE HTML>
         <p>Your browser does not support Javascript! Please enable it or switch to a Javascript enabled browser.</p>
     </noscript>
     <p>Redirecting...</p>
-    <p id="error">
-        Error: no access token.
-    </p>
+    <p id="error"></p>
   </body>
 </html>'''
 
