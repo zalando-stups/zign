@@ -172,24 +172,19 @@ def get_config(config_module=None, override=None):
         config['business_partner_id'] = click.prompt('Please enter the business partner ID')
 
     if config != old_config:
-        stups_cli.config.store_config(config, config_module)
+        stups_cli.config.store_config_ztoken(config, config_module)
 
     config.update(override)
     return config
 
 
 def get_tokens():
-    try:
-        with open(TOKENS_FILE_PATH) as fd:
-            data = yaml.safe_load(fd)
-    except:
-        data = None
-    return data or {}
+    return load_config_ztoken(TOKENS_FILE_PATH)
 
 
-def get_refresh_token():
+def load_config_ztoken(config_file: str):
     try:
-        with open(REFRESH_TOKEN_FILE_PATH) as fd:
+        with open(config_file) as fd:
             data = yaml.safe_load(fd)
     except:
         data = None
@@ -234,10 +229,10 @@ def store_token(name: str, result: dict):
     data[name] = result
     data[name]['creation_time'] = time.time()
 
-    store_config(data, TOKENS_FILE_PATH)
+    store_config_ztoken(data, TOKENS_FILE_PATH)
 
 
-def store_config(data: dict, path: str):
+def store_config_ztoken(data: dict, path: str):
     dir_path = os.path.dirname(path)
     if dir_path:
         os.makedirs(dir_path, exist_ok=True)
@@ -263,7 +258,7 @@ def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, clien
         if existing_token and existing_token.get('access_token').count('.') >= 2:
             return existing_token
 
-    data = get_refresh_token()
+    data = load_config_ztoken(REFRESH_TOKEN_FILE_PATH)
 
     # Always try with refresh token first
     if data:
@@ -283,7 +278,7 @@ def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, clien
                 store_token(name, token)
 
             # Store the latest refresh token
-            store_config({'refresh_token': token['refresh_token']}, REFRESH_TOKEN_FILE_PATH)
+            store_config_ztoken({'refresh_token': token['refresh_token']}, REFRESH_TOKEN_FILE_PATH)
             return token
         except RequestException as exception:
             error(exception)
@@ -335,7 +330,7 @@ def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, clien
                  'token_type':      httpd.query_params['token_type'][0],
                  'scope':           ''}
 
-        store_config({'refresh_token': token['refresh_token']}, REFRESH_TOKEN_FILE_PATH)
+        store_config_ztoken({'refresh_token': token['refresh_token']}, REFRESH_TOKEN_FILE_PATH)
         stups_cli.config.store_config(config, CONFIG_NAME)
 
         if name:
