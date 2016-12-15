@@ -319,8 +319,21 @@ def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, clien
         browser_url = urlunsplit((parsed_authorize_url.scheme, parsed_authorize_url.netloc, parsed_authorize_url.path,
                                   param_string, ''))
 
-        webbrowser.open(browser_url, new=1, autoraise=True)
+        # Redirect stdout and stderr. In Linux, a message is outputted to stdout when opening the browser
+        # (and then a message to stderr because it can't write).
+        saved_stdout = os.dup(1)
+        saved_stderr = os.dup(2)
+        os.close(1)
+        os.close(2)
+        os.open(os.devnull, os.O_RDWR)
+        try:
+            webbrowser.get().open(browser_url, new=1, autoraise=True)
+        finally:
+            os.dup2(saved_stdout, 1)
+            os.dup2(saved_stderr, 2)
+
         info('Your browser has been opened to visit:\n\n\t{}\n'.format(browser_url))
+
     else:
         raise AuthenticationFailed('Failed to launch local server')
 
