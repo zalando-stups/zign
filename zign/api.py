@@ -243,7 +243,7 @@ def store_config_ztoken(data: dict, path: str):
     if dir_path:
         os.makedirs(dir_path, exist_ok=True)
 
-    with open(REFRESH_TOKEN_FILE_PATH, 'w') as fd:
+    with open(path, 'w') as fd:
         yaml.safe_dump(data, fd)
 
 
