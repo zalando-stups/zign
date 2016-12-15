@@ -154,14 +154,16 @@ def get_config(config_module=None, override=None):
     config = stups_cli.config.load_config(config_module)
     old_config = config.copy()
 
-    while 'authorize_url' not in override and 'authorize_url' not in config:
-        config['authorize_url'] = click.prompt('Please enter the OAuth Authorization Endpoint URL', type=UrlType())
+    for oauth2_url, message in {'authorize_url': 'Authorization', 'token_url': 'Token'}.items():
+        while oauth2_url not in override and oauth2_url not in config:
+            config[oauth2_url] = click.prompt('Please enter the OAuth 2 {} Endpoint URL'.format(message),
+                                              type=UrlType())
 
-        try:
-            requests.get(config['authorize_url'], timeout=5)
-        except RequestException:
-            error('Could not reach {}'.format(config['authorize_url']))
-            del config['authorize_url']
+            try:
+                requests.get(config[oauth2_url], timeout=5)
+            except RequestException:
+                error('Could not reach {}'.format(config[oauth2_url]))
+                del config[oauth2_url]
 
     if 'client_id' not in override and 'client_id' not in config:
         config['client_id'] = click.prompt('Please enter the client ID')
@@ -231,39 +233,47 @@ def store_token(name: str, result: dict):
         yaml.safe_dump(data, fd)
 
 
-def get_token_by_refresh(name, authorize_url, client_id, business_partner_id, refresh_token):
-
-    params = {'grant_type':             'refresh_token',
-              'business_partner_id':    business_partner_id,
-              'client_id':              client_id,
-              'refresh_token':          refresh_token}
-
-    r = requests.post(authorize_url, data=params)
-    return r.json()
-
-
-def get_token_implicit_flow(name=None, authorize_url=None, client_id=None, business_partner_id=None,
+def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, client_id=None, business_partner_id=None,
                             refresh=False):
     '''Gets a Platform IAM access token using browser redirect flow'''
+
+    override = {'name':                 name,
+                'authorize_url':        authorize_url,
+                'token_url':            token_url,
+                'client_id':            client_id,
+                'business_partner_id':  business_partner_id}
+    config = get_config(CONFIG_NAME, override=override)
 
     if name and not refresh:
         existing_token = get_existing_token(name)
         # This will clear any non-JWT tokens
         if existing_token and existing_token.get('access_token').count('.') >= 2:
             return existing_token
-        else:
-            expired_token = get_existing_token(name, expired=True)
-            if expired_token.get('access_token').count('.') >= 2:
-                new_token = get_token_by_refresh(refresh_token, name, authorize_url, client_id, business_partner_id)
-                if new_token:
-                    return new_token
 
-    override = {'name':                 name,
-                'authorize_url':        authorize_url,
-                'client_id':            client_id,
-                'business_partner_id':  business_partner_id}
-    config = get_config(CONFIG_NAME, override=override)
+    # Always try with refresh token first
+    if 'refresh_token' in config:
+        payload = {'grant_type':            'refresh_token',
+                   'client_id':             config['client_id'],
+                   'business_partner_id':   config['business_partner_id'],
+                   'refresh_token':         config['refresh_token']}
+        try:
+            r = requests.post(config['token_url'], data=payload)
+            r.raise_for_status
 
+            token = r.json()
+            token['scope'] = ''
+            if name:
+                token['name'] = name
+                store_token(name, token)
+
+            # Store the latest refresh token
+            config['refresh_token'] = token['refresh_token']
+            stups_cli.config.store_config(config, CONFIG_NAME)
+            return token
+        except RequestException as exception:
+            error(exception)
+
+    # Get new token
     success = False
     # Must match redirect URIs in client configuration (http://localhost:8081-8181)
     port_number = 8081
@@ -309,6 +319,10 @@ def get_token_implicit_flow(name=None, authorize_url=None, client_id=None, busin
                  'expires_in':      int(httpd.query_params['expires_in'][0]),
                  'token_type':      httpd.query_params['token_type'][0],
                  'scope':           ''}
+
+        config['refresh_token'] = token['refresh_token']
+        stups_cli.config.store_config(config, CONFIG_NAME)
+
         if name:
             token['name'] = name
             store_token(name, token)
