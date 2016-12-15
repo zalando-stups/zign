@@ -10,7 +10,7 @@ import socket
 import webbrowser
 import yaml
 
-from .config import KEYRING_KEY, OLD_CONFIG_NAME, CONFIG_NAME, TOKENS_FILE_PATH
+from .config import KEYRING_KEY, OLD_CONFIG_NAME, CONFIG_NAME, REFRESH_TOKEN_FILE_PATH, TOKENS_FILE_PATH
 from oauth2client import tools
 from requests import RequestException
 from urllib.parse import parse_qs
@@ -187,6 +187,15 @@ def get_tokens():
     return data or {}
 
 
+def get_refresh_token():
+    try:
+        with open(REFRESH_TOKEN_FILE_PATH) as fd:
+            data = yaml.safe_load(fd)
+    except:
+        data = None
+    return data or {}
+
+
 def get_new_token(realm: str, scope: list, user, password, url=None, insecure=False):
     if not url:
         config = get_config(OLD_CONFIG_NAME)
@@ -233,6 +242,17 @@ def store_token(name: str, result: dict):
         yaml.safe_dump(data, fd)
 
 
+def store_refresh_token(refresh_token: str):
+    data = {'refresh_token': refresh_token}
+
+    dir_path = os.path.dirname(REFRESH_TOKEN_FILE_PATH)
+    if dir_path:
+        os.makedirs(dir_path, exist_ok=True)
+
+    with open(REFRESH_TOKEN_FILE_PATH, 'w') as fd:
+        yaml.safe_dump(data, fd)
+
+
 def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, client_id=None, business_partner_id=None,
                             refresh=False):
     '''Gets a Platform IAM access token using browser redirect flow'''
@@ -250,12 +270,15 @@ def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, clien
         if existing_token and existing_token.get('access_token').count('.') >= 2:
             return existing_token
 
+    data = get_refresh_token()
+
     # Always try with refresh token first
-    if 'refresh_token' in config:
+    if data:
+        refresh_token = data['refresh_token']
         payload = {'grant_type':            'refresh_token',
                    'client_id':             config['client_id'],
                    'business_partner_id':   config['business_partner_id'],
-                   'refresh_token':         config['refresh_token']}
+                   'refresh_token':         refresh_token}
         try:
             r = requests.post(config['token_url'], timeout=20, data=payload)
             r.raise_for_status()
@@ -267,8 +290,7 @@ def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, clien
                 store_token(name, token)
 
             # Store the latest refresh token
-            config['refresh_token'] = token['refresh_token']
-            stups_cli.config.store_config(config, CONFIG_NAME)
+            store_refresh_token(token['refresh_token'])
             return token
         except RequestException as exception:
             error(exception)
@@ -320,7 +342,7 @@ def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, clien
                  'token_type':      httpd.query_params['token_type'][0],
                  'scope':           ''}
 
-        config['refresh_token'] = token['refresh_token']
+        store_refresh_token(token['refresh_token'])
         stups_cli.config.store_config(config, CONFIG_NAME)
 
         if name:
