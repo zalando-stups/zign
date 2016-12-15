@@ -10,7 +10,7 @@ import socket
 import webbrowser
 import yaml
 
-from .config import KEYRING_KEY, OLD_CONFIG_NAME, CONFIG_NAME, TOKENS_FILE_PATH
+from .config import KEYRING_KEY, OLD_CONFIG_NAME, CONFIG_NAME, REFRESH_TOKEN_FILE_PATH, TOKENS_FILE_PATH
 from oauth2client import tools
 from requests import RequestException
 from urllib.parse import parse_qs
@@ -160,31 +160,37 @@ def get_config(config_module=None, override=None):
     config = stups_cli.config.load_config(config_module)
     old_config = config.copy()
 
-    while 'authorize_url' not in override and 'authorize_url' not in config:
-        config['authorize_url'] = click.prompt('Please enter the OAuth Authorization Endpoint URL', type=UrlType())
+    for oauth2_url, message in {'authorize_url': 'Authorization', 'token_url': 'Token'}.items():
+        while oauth2_url not in override and oauth2_url not in config:
+            config[oauth2_url] = click.prompt('Please enter the OAuth 2 {} Endpoint URL'.format(message),
+                                              type=UrlType())
 
-        try:
-            requests.get(config['authorize_url'], timeout=5)
-        except RequestException:
-            error('Could not reach {}'.format(config['authorize_url']))
-            del config['authorize_url']
+            try:
+                requests.get(config[oauth2_url], timeout=5)
+            except RequestException:
+                error('Could not reach {}'.format(config[oauth2_url]))
+                del config[oauth2_url]
 
     if 'client_id' not in override and 'client_id' not in config:
-        config['client_id'] = click.prompt('Please enter the client ID')
+        config['client_id'] = click.prompt('Please enter the OAuth 2 Client ID')
 
     if 'business_partner_id' not in override and 'business_partner_id' not in config:
-        config['business_partner_id'] = click.prompt('Please enter the business partner ID')
+        config['business_partner_id'] = click.prompt('Please enter the Business Partner ID')
 
     if config != old_config:
-        stups_cli.config.store_config(config, config_module)
+        store_config_ztoken(config, config_module)
 
     config.update(override)
     return config
 
 
 def get_tokens():
+    return load_config_ztoken(TOKENS_FILE_PATH)
+
+
+def load_config_ztoken(config_file: str):
     try:
-        with open(TOKENS_FILE_PATH) as fd:
+        with open(config_file) as fd:
             data = yaml.safe_load(fd)
     except:
         data = None
@@ -229,17 +235,28 @@ def store_token(name: str, result: dict):
     data[name] = result
     data[name]['creation_time'] = time.time()
 
-    dir_path = os.path.dirname(TOKENS_FILE_PATH)
+    store_config_ztoken(data, TOKENS_FILE_PATH)
+
+
+def store_config_ztoken(data: dict, path: str):
+    dir_path = os.path.dirname(path)
     if dir_path:
         os.makedirs(dir_path, exist_ok=True)
 
-    with open(TOKENS_FILE_PATH, 'w') as fd:
+    with open(REFRESH_TOKEN_FILE_PATH, 'w') as fd:
         yaml.safe_dump(data, fd)
 
 
-def get_token_implicit_flow(name=None, authorize_url=None, client_id=None, business_partner_id=None,
+def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, client_id=None, business_partner_id=None,
                             refresh=False):
     '''Gets a Platform IAM access token using browser redirect flow'''
+
+    override = {'name':                 name,
+                'authorize_url':        authorize_url,
+                'token_url':            token_url,
+                'client_id':            client_id,
+                'business_partner_id':  business_partner_id}
+    config = get_config(CONFIG_NAME, override=override)
 
     if name and not refresh:
         existing_token = get_existing_token(name)
@@ -247,12 +264,32 @@ def get_token_implicit_flow(name=None, authorize_url=None, client_id=None, busin
         if existing_token and existing_token.get('access_token').count('.') >= 2:
             return existing_token
 
-    override = {'name':                 name,
-                'authorize_url':             authorize_url,
-                'client_id':            client_id,
-                'business_partner_id':  business_partner_id}
-    config = get_config(CONFIG_NAME, override=override)
+    data = load_config_ztoken(REFRESH_TOKEN_FILE_PATH)
 
+    # Always try with refresh token first
+    refresh_token = data.get('refresh_token')
+    if refresh_token:
+        payload = {'grant_type':            'refresh_token',
+                   'client_id':             config['client_id'],
+                   'business_partner_id':   config['business_partner_id'],
+                   'refresh_token':         refresh_token}
+        try:
+            r = requests.post(config['token_url'], timeout=20, data=payload)
+            r.raise_for_status()
+
+            token = r.json()
+            token['scope'] = ''
+            if name:
+                token['name'] = name
+                store_token(name, token)
+
+            # Store the latest refresh token
+            store_config_ztoken({'refresh_token': token['refresh_token']}, REFRESH_TOKEN_FILE_PATH)
+            return token
+        except RequestException as exception:
+            error(exception)
+
+    # Get new token
     success = False
     # Must match redirect URIs in client configuration (http://localhost:8081-8181)
     port_number = 8081
@@ -298,6 +335,10 @@ def get_token_implicit_flow(name=None, authorize_url=None, client_id=None, busin
                  'expires_in':      int(httpd.query_params['expires_in'][0]),
                  'token_type':      httpd.query_params['token_type'][0],
                  'scope':           ''}
+
+        store_config_ztoken({'refresh_token': token['refresh_token']}, REFRESH_TOKEN_FILE_PATH)
+        stups_cli.config.store_config(config, CONFIG_NAME)
+
         if name:
             token['name'] = name
             store_token(name, token)
