@@ -49,6 +49,24 @@ EXTRACT_TOKEN_PAGE = '''<!DOCTYPE HTML>
     </style>
     <script>
         (function extractFragmentQueryString() {{
+            function post(url, body, successCb, errorCb) {{
+                var success = successCb || noop;
+                var error = errorCb || noop;
+                var req = new XMLHttpRequest();
+                req.open("POST", url, true);
+                req.setRequestHeader("Content-Type", "application/json");
+                req.onreadystatechange = function() {{
+                    if (req.readyState === XMLHttpRequest.DONE) {{
+                        if (req.status >= 200 && req.status < 300) {{
+                          success(req);
+                        }} else {{
+                          error(req);
+                        }}
+                    }}
+                }}
+                req.send(JSON.stringify(body));
+            }}
+
             function displayError(message) {{
               var errorElement = document.getElementById("error");
               errorElement.textContent = message || "Unknown error";
@@ -69,7 +87,9 @@ EXTRACT_TOKEN_PAGE = '''<!DOCTYPE HTML>
             var query = window.location.hash.substring(1);
             var params = parseQueryString(query);
             if (params.access_token) {{
-                window.location.href = "http://localhost:{port}/?" + query;
+                post("http://localhost:{port}", params, null, function error() {{
+                    displayError("Error: Could not POST to server.")
+                }});
             }} else {{
                 displayError("Error: No access_token in URL.")
             }}
