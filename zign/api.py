@@ -51,7 +51,7 @@ EXTRACT_TOKEN_PAGE = '''<!DOCTYPE HTML>
         (function extractFragmentQueryString() {{
             function displayError(message) {{
               var errorElement = document.getElementById("error");
-              errorElement.textContent = message || "Unknown error";
+              errorElement.textContent = message || "Unknown error";
             }}
 
             function parseQueryString(qs) {{
@@ -69,7 +69,7 @@ EXTRACT_TOKEN_PAGE = '''<!DOCTYPE HTML>
             var query = window.location.hash.substring(1);
             var params = parseQueryString(query);
             if (params.access_token) {{
-                window.location.href = "http://localhost:{port}/?" + fragment;
+                window.location.href = "http://localhost:{port}/?" + query;
             }} else {{
                 displayError("Error: No access_token in URL.")
             }}
