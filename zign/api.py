@@ -211,11 +211,11 @@ def get_new_token(realm: str, scope: list, user, password, url=None, insecure=Fa
     return json_data
 
 
-def get_existing_token(name: str, expired=False) -> dict:
+def get_existing_token(name: str) -> dict:
     '''Return existing token if it exists and if it's valid, return None otherwise'''
     data = get_tokens()
     existing_token = data.get(name)
-    if expired or is_valid(existing_token):
+    if is_valid(existing_token):
         return existing_token
 
 
