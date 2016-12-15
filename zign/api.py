@@ -1,5 +1,4 @@
 import click
-import contextlib
 from clickclick import error, info, UrlType
 import keyring
 import os
