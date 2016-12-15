@@ -178,7 +178,7 @@ def get_config(config_module=None, override=None):
         config['business_partner_id'] = click.prompt('Please enter the Business Partner ID')
 
     if config != old_config:
-        store_config_ztoken(config, config_module)
+        stups_cli.config.store_config(config, config_module)
 
     config.update(override)
     return config
