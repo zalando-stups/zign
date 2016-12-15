@@ -209,11 +209,11 @@ def get_new_token(realm: str, scope: list, user, password, url=None, insecure=Fa
     return json_data
 
 
-def get_existing_token(name: str) -> dict:
+def get_existing_token(name: str, expired=False) -> dict:
     '''Return existing token if it exists and if it's valid, return None otherwise'''
     data = get_tokens()
     existing_token = data.get(name)
-    if is_valid(existing_token):
+    if expired or is_valid(existing_token):
         return existing_token
 
 
@@ -231,6 +231,17 @@ def store_token(name: str, result: dict):
         yaml.safe_dump(data, fd)
 
 
+def get_token_by_refresh(name, authorize_url, client_id, business_partner_id, refresh_token):
+
+    params = {'grant_type':             'refresh_token',
+              'business_partner_id':    business_partner_id,
+              'client_id':              client_id,
+              'refresh_token':          refresh_token}
+
+    r = requests.post(authorize_url, data=params)
+    return r.json()
+
+
 def get_token_implicit_flow(name=None, authorize_url=None, client_id=None, business_partner_id=None,
                             refresh=False):
     '''Gets a Platform IAM access token using browser redirect flow'''
@@ -240,9 +251,15 @@ def get_token_implicit_flow(name=None, authorize_url=None, client_id=None, busin
         # This will clear any non-JWT tokens
         if existing_token and existing_token.get('access_token').count('.') >= 2:
             return existing_token
+        else:
+            expired_token = get_existing_token(name, expired=True)
+            if expired_token.get('access_token').count('.') >= 2:
+                new_token = get_token_by_refresh(refresh_token, name, authorize_url, client_id, business_partner_id)
+                if new_token:
+                    return new_token
 
     override = {'name':                 name,
-                'authorize_url':             authorize_url,
+                'authorize_url':        authorize_url,
                 'client_id':            client_id,
                 'business_partner_id':  business_partner_id}
     config = get_config(CONFIG_NAME, override=override)
