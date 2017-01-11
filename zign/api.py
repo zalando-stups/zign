@@ -1,6 +1,6 @@
 import click
 from clickclick import error, info, UrlType
-import keyring
+import logging
 import os
 import stups_cli.config
 import time
@@ -10,91 +10,16 @@ import socket
 import webbrowser
 import yaml
 
-from .config import KEYRING_KEY, OLD_CONFIG_NAME, CONFIG_NAME, REFRESH_TOKEN_FILE_PATH, TOKENS_FILE_PATH
-from oauth2client import tools
+from .oauth2 import ClientRedirectServer
+
+from .config import OLD_CONFIG_NAME, CONFIG_NAME, REFRESH_TOKEN_FILE_PATH, TOKENS_FILE_PATH
 from requests import RequestException
-from urllib.parse import parse_qs
 from urllib.parse import urlparse
 from urllib.parse import urlunsplit
 
 TOKEN_MINIMUM_VALIDITY_SECONDS = 60*5  # 5 minutes
 
-SUCCESS_PAGE = '''<!DOCTYPE HTML>
-<html lang="en-US">
-  <head>
-    <title>Authentication Successful - Zign</title>
-    <style>
-        body {
-            font-family: sans-serif;
-        }
-    </style>
-  </head>
-  <body>
-    <p>You are now authenticated with Zign.</p>
-    <p>The authentication flow has completed. You may close this window.</p>
-  </body>
-</html>'''
-
-EXTRACT_TOKEN_PAGE = '''<!DOCTYPE HTML>
-<html lang="en-US">
-  <head>
-    <title>Redirecting...</title>
-    <style>
-        body {{
-            font-family: sans-serif;
-        }}
-        #error {{
-            color: red;
-        }}
-    </style>
-    <script>
-        (function extractFragmentQueryString() {{
-            function displayError(message) {{
-              var errorElement = document.getElementById("error");
-              errorElement.textContent = message || "Unknown error";
-            }}
-
-            function parseQueryString(qs) {{
-                return qs.split("&")
-                        .reduce(function (result, param) {{
-                          var split = param.split("=");
-                          if (split.length === 2) {{
-                            var key = decodeURIComponent(split[0]);
-                            var val = decodeURIComponent(split[1]);
-                            result[key] = val;
-                          }}
-                          return result;
-                        }}, {{}});
-            }}
-            var query = window.location.hash.substring(1);
-            var params = parseQueryString(query);
-            if (params.access_token) {{
-                window.location.href = "http://localhost:{port}/?" + query;
-            }} else {{
-                displayError("Error: No access_token in URL.")
-            }}
-        }})();
-    </script>
-  </head>
-  <body>
-    <noscript>
-        <p>Your browser does not support Javascript! Please enable it or switch to a Javascript enabled browser.</p>
-    </noscript>
-    <p>Redirecting...</p>
-    <p id="error"></p>
-  </body>
-</html>'''
-
-ERROR_PAGE = '''<!DOCTYPE HTML>
-<html lang="en-US">
-  <head>
-    <title>Authentication Failed - Zign</title>
-  </head>
-  <body>
-    <p><font face=arial>The authentication flow did not complete successfully. Please try again. You may close this
-    window.</font></p>
-  </body>
-</html>'''
+logger = logging.getLogger('zign.api')
 
 
 class ServerError(Exception):
@@ -116,30 +41,6 @@ class ConfigurationError(Exception):
 
     def __str__(self):
         return 'Configuration error: {}'.format(self.msg)
-
-
-class ClientRedirectHandler(tools.ClientRedirectHandler):
-    '''Handles OAuth 2.0 redirect and return a success page if the flow has completed.'''
-
-    def do_GET(self):
-        '''Handle the GET request from the redirect.
-
-        Parses the token from the query parameters and returns a success page if the flow has completed'''
-
-        self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        self.end_headers()
-        query_string = urlparse(self.path).query
-
-        if not query_string:
-            self.wfile.write(EXTRACT_TOKEN_PAGE.format(port=self.server.server_port).encode('utf-8'))
-        else:
-            self.server.query_params = parse_qs(query_string)
-            if 'access_token' in self.server.query_params:
-                page = SUCCESS_PAGE
-            else:
-                page = ERROR_PAGE
-            self.wfile.write(page.encode('utf-8'))
 
 
 def get_config(config_module=None, override=None):
@@ -198,6 +99,8 @@ def load_config_ztoken(config_file: str):
 
 
 def get_new_token(realm: str, scope: list, user, password, url=None, insecure=False):
+    logger.warning('"get_new_token" is deprecated, please use "zign.api.get_token" instead')
+
     if not url:
         config = get_config(OLD_CONFIG_NAME)
         url = config.get('url')
@@ -247,9 +150,73 @@ def store_config_ztoken(data: dict, path: str):
         yaml.safe_dump(data, fd)
 
 
+def perform_implicit_flow(config: dict):
+
+    # Get new token
+    success = False
+    # Must match redirect URIs in client configuration (http://localhost:8081-8181)
+    port_number = 8081
+    max_port_number = port_number + 100
+
+    while True:
+        try:
+            httpd = ClientRedirectServer(('localhost', port_number))
+        except socket.error as e:
+            if port_number > max_port_number:
+                success = False
+                break
+            port_number += 1
+        else:
+            success = True
+            break
+
+    if success:
+        params = {'response_type':          'token',
+                  'business_partner_id':    config['business_partner_id'],
+                  'client_id':              config['client_id'],
+                  'redirect_uri':           'http://localhost:{}'.format(port_number)}
+
+        param_list = ['{}={}'.format(key, value) for key, value in sorted(params.items())]
+        param_string = '&'.join(param_list)
+        parsed_authorize_url = urlparse(config['authorize_url'])
+        browser_url = urlunsplit((parsed_authorize_url.scheme, parsed_authorize_url.netloc, parsed_authorize_url.path,
+                                  param_string, ''))
+
+        # Redirect stdout and stderr. In Linux, a message is outputted to stdout when opening the browser
+        # (and then a message to stderr because it can't write).
+        saved_stdout = os.dup(1)
+        saved_stderr = os.dup(2)
+        os.close(1)
+        os.close(2)
+        os.open(os.devnull, os.O_RDWR)
+        try:
+            webbrowser.open(browser_url, new=1, autoraise=True)
+        finally:
+            os.dup2(saved_stdout, 1)
+            os.dup2(saved_stderr, 2)
+
+        info('Your browser has been opened to visit:\n\n\t{}\n'.format(browser_url))
+
+    else:
+        raise AuthenticationFailed('Failed to launch local server')
+
+    while not httpd.query_params:
+        # Handle first request, which will redirect to Javascript
+        # Handle next request, with token
+        httpd.handle_request()
+
+    return httpd.query_params
+
+
 def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, client_id=None, business_partner_id=None,
                             refresh=False):
     '''Gets a Platform IAM access token using browser redirect flow'''
+
+    if name and not refresh:
+        existing_token = get_existing_token(name)
+        # This will clear any non-JWT tokens
+        if existing_token and existing_token.get('access_token').count('.') >= 2:
+            return existing_token
 
     override = {'name':                 name,
                 'authorize_url':        authorize_url,
@@ -257,12 +224,6 @@ def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, clien
                 'client_id':            client_id,
                 'business_partner_id':  business_partner_id}
     config = get_config(CONFIG_NAME, override=override)
-
-    if name and not refresh:
-        existing_token = get_existing_token(name)
-        # This will clear any non-JWT tokens
-        if existing_token and existing_token.get('access_token').count('.') >= 2:
-            return existing_token
 
     data = load_config_ztoken(REFRESH_TOKEN_FILE_PATH)
 
@@ -289,67 +250,17 @@ def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, clien
         except RequestException as exception:
             error(exception)
 
-    # Get new token
-    success = False
-    # Must match redirect URIs in client configuration (http://localhost:8081-8181)
-    port_number = 8081
-    max_port_number = port_number + 100
+    response = perform_implicit_flow(config)
 
-    while True:
-        try:
-            httpd = tools.ClientRedirectServer(('localhost', port_number), ClientRedirectHandler)
-        except socket.error as e:
-            if port_number > max_port_number:
-                success = False
-                break
-            port_number += 1
-        else:
-            success = True
-            break
-
-    if success:
-        params = {'response_type':          'token',
-                  'business_partner_id':    config['business_partner_id'],
-                  'client_id':              config['client_id'],
-                  'redirect_uri':           'http://localhost:{}'.format(port_number)}
-
-        param_list = ['{}={}'.format(key, params[key]) for key in params]
-        param_string = '&'.join(param_list)
-        parsed_authorize_url = urlparse(config['authorize_url'])
-        browser_url = urlunsplit((parsed_authorize_url.scheme, parsed_authorize_url.netloc, parsed_authorize_url.path,
-                                  param_string, ''))
-
-        # Redirect stdout and stderr. In Linux, a message is outputted to stdout when opening the browser
-        # (and then a message to stderr because it can't write).
-        saved_stdout = os.dup(1)
-        saved_stderr = os.dup(2)
-        os.close(1)
-        os.close(2)
-        os.open(os.devnull, os.O_RDWR)
-        try:
-            webbrowser.get().open(browser_url, new=1, autoraise=True)
-        finally:
-            os.dup2(saved_stdout, 1)
-            os.dup2(saved_stderr, 2)
-
-        info('Your browser has been opened to visit:\n\n\t{}\n'.format(browser_url))
-
-    else:
-        raise AuthenticationFailed('Failed to launch local server')
-
-    while not httpd.query_params:
-        # Handle first request, which will redirect to Javascript
-        # Handle next request, with token
-        httpd.handle_request()
-
-    if 'access_token' in httpd.query_params:
-        token = {'access_token':    httpd.query_params['access_token'][0],
-                 'refresh_token':   httpd.query_params['refresh_token'][0],
-                 'expires_in':      int(httpd.query_params['expires_in'][0]),
-                 'token_type':      httpd.query_params['token_type'][0],
+    if 'access_token' in response:
+        token = {'access_token':    response['access_token'],
+                 'refresh_token':   response.get('refresh_token'),
+                 'expires_in':      int(response['expires_in']),
+                 'token_type':      response['token_type'],
                  'scope':           ''}
 
-        store_config_ztoken({'refresh_token': token['refresh_token']}, REFRESH_TOKEN_FILE_PATH)
+        if token['refresh_token']:
+            store_config_ztoken({'refresh_token': token['refresh_token']}, REFRESH_TOKEN_FILE_PATH)
         stups_cli.config.store_config(config, CONFIG_NAME)
 
         if name:
@@ -363,58 +274,10 @@ def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, clien
 def get_named_token(scope, realm, name, user, password, url=None,
                     insecure=False, refresh=False, use_keyring=True, prompt=False):
     '''get named access token, return existing if still valid'''
+    logger.warning('"get_named_token" is deprecated, please use "zign.api.get_token" instead')
 
-    if name and not refresh:
-        existing_token = get_existing_token(name)
-        if existing_token:
-            return existing_token
-
-    if name and not realm:
-        access_token = get_service_token(name, scope)
-        if access_token:
-            return {'access_token': access_token}
-
-    config = get_config(OLD_CONFIG_NAME)
-
-    url = url or config.get('url')
-
-    while not url and prompt:
-        url = click.prompt('Please enter the OAuth access token service URL', type=UrlType())
-
-        try:
-            requests.get(url, timeout=5, verify=not insecure)
-        except:
-            error('Could not reach {}'.format(url))
-            url = None
-
-        config['url'] = url
-
-    stups_cli.config.store_config(config, OLD_CONFIG_NAME)
-
-    password = password or keyring.get_password(KEYRING_KEY, user)
-
-    while True:
-        if not password and prompt:
-            password = click.prompt('Password for {}'.format(user), hide_input=True)
-
-        try:
-            result = get_new_token(realm, scope, user, password, url=url, insecure=insecure)
-            break
-        except AuthenticationFailed as e:
-            if prompt:
-                error(str(e))
-                info('Please check your username and password and try again.')
-                password = None
-            else:
-                raise
-
-    if result and use_keyring:
-        keyring.set_password(KEYRING_KEY, user, password)
-
-    if name:
-        store_token(name, result)
-
-    return result
+    access_token = get_token(name, scope)
+    return {'access_token': access_token}
 
 
 def is_valid(token: dict):
@@ -456,20 +319,7 @@ def get_token(name: str, scopes: list):
     if access_token:
         return access_token
 
-    config = get_config(OLD_CONFIG_NAME)
-    user = config.get('user') or os.getenv('ZIGN_USER') or os.getenv('USER')
-
-    if not user:
-        raise ConfigurationError('Missing OAuth username. ' +
-                                 'Either set "user" in configuration file or ZIGN_USER environment variable.')
-
-    if not config.get('url'):
-        raise ConfigurationError('Missing OAuth access token service URL. ' +
-                                 'Please set "url" in configuration file.')
-
-    password = os.getenv('ZIGN_PASSWORD') or keyring.get_password(KEYRING_KEY, user)
-    token = get_new_token(config.get('realm'), scopes, user, password,
-                          url=config.get('url'), insecure=config.get('insecure'))
+    # TODO: support scopes for implicit flow
+    token = get_token_implicit_flow(name)
     if token:
-        store_token(name, token)
         return token['access_token']
