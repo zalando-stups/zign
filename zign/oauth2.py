@@ -1,7 +1,6 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import parse_qs, urlparse
 
-from urllib.parse import parse_qs
-from urllib.parse import urlparse
 
 SUCCESS_PAGE = '''<!DOCTYPE HTML>
 <html lang="en-US">

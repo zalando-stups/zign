@@ -1,21 +1,21 @@
-import click
-from clickclick import error, info, UrlType
 import logging
 import os
-import stups_cli.config
-import time
-import tokens
-import requests
 import socket
+import time
 import webbrowser
+from urllib.parse import urlparse, urlunsplit
+
+import click
+import requests
+import stups_cli.config
+import tokens
 import yaml
-
-from .oauth2 import ClientRedirectServer
-
-from .config import OLD_CONFIG_NAME, CONFIG_NAME, REFRESH_TOKEN_FILE_PATH, TOKENS_FILE_PATH
+from clickclick import UrlType, error, info
 from requests import RequestException
-from urllib.parse import urlparse
-from urllib.parse import urlunsplit
+
+from .config import (CONFIG_NAME, OLD_CONFIG_NAME, REFRESH_TOKEN_FILE_PATH,
+                     TOKENS_FILE_PATH)
+from .oauth2 import ClientRedirectServer
 
 TOKEN_MINIMUM_VALIDITY_SECONDS = 60*5  # 5 minutes
 
