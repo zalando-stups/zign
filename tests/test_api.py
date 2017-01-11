@@ -16,10 +16,13 @@ def test_is_valid():
 
 
 def test_get_named_token_deprecated(monkeypatch):
+    logger = MagicMock()
     response = MagicMock(status_code=401)
     monkeypatch.setattr('zign.api.get_token', lambda x, y: 'mytok701')
+    monkeypatch.setattr('zign.api.logger', logger)
     token = zign.api.get_named_token('myrealm', ['myscope'], 'myuser', 'mypass', 'http://example.org')
     assert 'mytok701' == token['access_token']
+    logger.warning.assert_called_with('"get_named_token" is deprecated, please use "zign.api.get_token" instead')
 
 
 def test_get_new_token_server_error(monkeypatch):
