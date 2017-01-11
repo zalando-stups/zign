@@ -212,7 +212,7 @@ def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, clien
                   'client_id':              config['client_id'],
                   'redirect_uri':           'http://localhost:{}'.format(port_number)}
 
-        param_list = ['{}={}'.format(key, params[key]) for key in params]
+        param_list = ['{}={}'.format(key, value) for key, value in sorted(params.items())]
         param_string = '&'.join(param_list)
         parsed_authorize_url = urlparse(config['authorize_url'])
         browser_url = urlunsplit((parsed_authorize_url.scheme, parsed_authorize_url.netloc, parsed_authorize_url.path,
@@ -242,10 +242,10 @@ def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, clien
         httpd.handle_request()
 
     if 'access_token' in httpd.query_params:
-        token = {'access_token':    httpd.query_params['access_token'][0],
-                 'refresh_token':   httpd.query_params['refresh_token'][0],
-                 'expires_in':      int(httpd.query_params['expires_in'][0]),
-                 'token_type':      httpd.query_params['token_type'][0],
+        token = {'access_token':    httpd.query_params['access_token'],
+                 'refresh_token':   httpd.query_params['refresh_token'],
+                 'expires_in':      int(httpd.query_params['expires_in']),
+                 'token_type':      httpd.query_params['token_type'],
                  'scope':           ''}
 
         store_config_ztoken({'refresh_token': token['refresh_token']}, REFRESH_TOKEN_FILE_PATH)

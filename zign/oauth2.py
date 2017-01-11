@@ -97,7 +97,10 @@ class ClientRedirectHandler(BaseHTTPRequestHandler):
         if not query_string:
             self.wfile.write(EXTRACT_TOKEN_PAGE.format(port=self.server.server_port).encode('utf-8'))
         else:
-            self.server.query_params = parse_qs(query_string)
+            query_params = {}
+            for key, val in parse_qs(query_string).items():
+                query_params[key] = val[0]
+            self.server.query_params = query_params
             if 'access_token' in self.server.query_params:
                 page = SUCCESS_PAGE
             else:
