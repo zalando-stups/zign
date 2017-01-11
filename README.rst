@@ -34,6 +34,7 @@ Usage
 .. code-block:: bash
 
     $ zign token uid cn
+    $ ztoken # shortcut
 
 See the `STUPS documentation on zign`_ for details.
 
