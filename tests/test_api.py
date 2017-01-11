@@ -100,12 +100,12 @@ def test_token_implicit_flow(monkeypatch):
         pass
 
     server = MagicMock()
-    server.return_value.query_params = {'access_token': 'mytok'}
+    server.return_value.query_params = {'access_token': 'mytok', 'refresh_token': 'foo', 'expires_in': 3600}
 
     load_config = MagicMock()
     load_config.return_value = {'authorize_url': 'https://localhost/authorize', 'token_url': 'https://localhost/token', 'client_id': 'foobar', 'business_partner_id': '123'}
     monkeypatch.setattr('stups_cli.config.load_config', load_config)
     monkeypatch.setattr('zign.api.load_config_ztoken', lambda x: {})
     monkeypatch.setattr('webbrowser.open', webbrowser_open)
-    monkeypatch.setattr('zign.oauth2.ClientRedirectServer', server)
+    monkeypatch.setattr('zign.api.ClientRedirectServer', server)
     token = zign.api.get_token_implicit_flow('test_token_implicit_flow')
