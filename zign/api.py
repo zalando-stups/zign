@@ -96,6 +96,8 @@ def load_config_ztoken(config_file: str):
 
 
 def get_new_token(realm: str, scope: list, user, password, url=None, insecure=False):
+    '''"get_new_token" is deprecated, please use "zign.api.get_token" instead'''
+
     if not url:
         config = get_config(OLD_CONFIG_NAME)
         url = config.get('url')
@@ -268,9 +270,10 @@ def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, clien
 
 def get_named_token(scope, realm, name, user, password, url=None,
                     insecure=False, refresh=False, use_keyring=True, prompt=False):
-    '''get named access token, return existing if still valid'''
-    import warnings
-    warnings.warn('"get_named_token" is deprecated, please use "zign.api.get_token" instead', DeprecationWarning)
+    '''get named access token, return existing if still valid
+
+    "get_named_token" is deprecated, please use "zign.api.get_token" instead
+    '''
 
     access_token = get_token(name, scope)
     return {'access_token': access_token}
