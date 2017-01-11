@@ -355,6 +355,7 @@ def get_token(name: str, scopes: list):
     if access_token:
         return access_token
 
+    # TODO: support scopes for implicit flow
     token = get_token_implicit_flow(name)
     if token:
         return token['access_token']
