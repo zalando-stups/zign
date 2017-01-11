@@ -1,6 +1,5 @@
 import click
 from clickclick import error, info, UrlType
-import keyring
 import os
 import stups_cli.config
 import time
@@ -12,7 +11,7 @@ import yaml
 
 from .oauth2 import ClientRedirectServer
 
-from .config import KEYRING_KEY, OLD_CONFIG_NAME, CONFIG_NAME, REFRESH_TOKEN_FILE_PATH, TOKENS_FILE_PATH
+from .config import OLD_CONFIG_NAME, CONFIG_NAME, REFRESH_TOKEN_FILE_PATH, TOKENS_FILE_PATH
 from requests import RequestException
 from urllib.parse import urlparse
 from urllib.parse import urlunsplit
@@ -146,47 +145,7 @@ def store_config_ztoken(data: dict, path: str):
         yaml.safe_dump(data, fd)
 
 
-def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, client_id=None, business_partner_id=None,
-                            refresh=False):
-    '''Gets a Platform IAM access token using browser redirect flow'''
-
-    override = {'name':                 name,
-                'authorize_url':        authorize_url,
-                'token_url':            token_url,
-                'client_id':            client_id,
-                'business_partner_id':  business_partner_id}
-    config = get_config(CONFIG_NAME, override=override)
-
-    if name and not refresh:
-        existing_token = get_existing_token(name)
-        # This will clear any non-JWT tokens
-        if existing_token and existing_token.get('access_token').count('.') >= 2:
-            return existing_token
-
-    data = load_config_ztoken(REFRESH_TOKEN_FILE_PATH)
-
-    # Always try with refresh token first
-    refresh_token = data.get('refresh_token')
-    if refresh_token:
-        payload = {'grant_type':            'refresh_token',
-                   'client_id':             config['client_id'],
-                   'business_partner_id':   config['business_partner_id'],
-                   'refresh_token':         refresh_token}
-        try:
-            r = requests.post(config['token_url'], timeout=20, data=payload)
-            r.raise_for_status()
-
-            token = r.json()
-            token['scope'] = ''
-            if name:
-                token['name'] = name
-                store_token(name, token)
-
-            # Store the latest refresh token
-            store_config_ztoken({'refresh_token': token['refresh_token']}, REFRESH_TOKEN_FILE_PATH)
-            return token
-        except RequestException as exception:
-            error(exception)
+def perform_implicit_flow(config: dict):
 
     # Get new token
     success = False
@@ -241,14 +200,62 @@ def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, clien
         # Handle next request, with token
         httpd.handle_request()
 
-    if 'access_token' in httpd.query_params:
-        token = {'access_token':    httpd.query_params['access_token'],
-                 'refresh_token':   httpd.query_params['refresh_token'],
-                 'expires_in':      int(httpd.query_params['expires_in']),
-                 'token_type':      httpd.query_params['token_type'],
+    return httpd.query_params
+
+
+def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, client_id=None, business_partner_id=None,
+                            refresh=False):
+    '''Gets a Platform IAM access token using browser redirect flow'''
+
+    if name and not refresh:
+        existing_token = get_existing_token(name)
+        # This will clear any non-JWT tokens
+        if existing_token and existing_token.get('access_token').count('.') >= 2:
+            return existing_token
+
+    override = {'name':                 name,
+                'authorize_url':        authorize_url,
+                'token_url':            token_url,
+                'client_id':            client_id,
+                'business_partner_id':  business_partner_id}
+    config = get_config(CONFIG_NAME, override=override)
+
+    data = load_config_ztoken(REFRESH_TOKEN_FILE_PATH)
+
+    # Always try with refresh token first
+    refresh_token = data.get('refresh_token')
+    if refresh_token:
+        payload = {'grant_type':            'refresh_token',
+                   'client_id':             config['client_id'],
+                   'business_partner_id':   config['business_partner_id'],
+                   'refresh_token':         refresh_token}
+        try:
+            r = requests.post(config['token_url'], timeout=20, data=payload)
+            r.raise_for_status()
+
+            token = r.json()
+            token['scope'] = ''
+            if name:
+                token['name'] = name
+                store_token(name, token)
+
+            # Store the latest refresh token
+            store_config_ztoken({'refresh_token': token['refresh_token']}, REFRESH_TOKEN_FILE_PATH)
+            return token
+        except RequestException as exception:
+            error(exception)
+
+    response = perform_implicit_flow(config)
+
+    if 'access_token' in response:
+        token = {'access_token':    response['access_token'],
+                 'refresh_token':   response.get('refresh_token'),
+                 'expires_in':      int(response['expires_in']),
+                 'token_type':      response['token_type'],
                  'scope':           ''}
 
-        store_config_ztoken({'refresh_token': token['refresh_token']}, REFRESH_TOKEN_FILE_PATH)
+        if token['refresh_token']:
+            store_config_ztoken({'refresh_token': token['refresh_token']}, REFRESH_TOKEN_FILE_PATH)
         stups_cli.config.store_config(config, CONFIG_NAME)
 
         if name:
@@ -262,58 +269,11 @@ def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, clien
 def get_named_token(scope, realm, name, user, password, url=None,
                     insecure=False, refresh=False, use_keyring=True, prompt=False):
     '''get named access token, return existing if still valid'''
+    import warnings
+    warnings.warn('"get_named_token" is deprecated, please use "zign.api.get_token" instead', DeprecationWarning)
 
-    if name and not refresh:
-        existing_token = get_existing_token(name)
-        if existing_token:
-            return existing_token
-
-    if name and not realm:
-        access_token = get_service_token(name, scope)
-        if access_token:
-            return {'access_token': access_token}
-
-    config = get_config(OLD_CONFIG_NAME)
-
-    url = url or config.get('url')
-
-    while not url and prompt:
-        url = click.prompt('Please enter the OAuth access token service URL', type=UrlType())
-
-        try:
-            requests.get(url, timeout=5, verify=not insecure)
-        except:
-            error('Could not reach {}'.format(url))
-            url = None
-
-        config['url'] = url
-
-    stups_cli.config.store_config(config, OLD_CONFIG_NAME)
-
-    password = password or keyring.get_password(KEYRING_KEY, user)
-
-    while True:
-        if not password and prompt:
-            password = click.prompt('Password for {}'.format(user), hide_input=True)
-
-        try:
-            result = get_new_token(realm, scope, user, password, url=url, insecure=insecure)
-            break
-        except AuthenticationFailed as e:
-            if prompt:
-                error(str(e))
-                info('Please check your username and password and try again.')
-                password = None
-            else:
-                raise
-
-    if result and use_keyring:
-        keyring.set_password(KEYRING_KEY, user, password)
-
-    if name:
-        store_token(name, result)
-
-    return result
+    access_token = get_token(name, scope)
+    return {'access_token': access_token}
 
 
 def is_valid(token: dict):

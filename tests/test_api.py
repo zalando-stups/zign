@@ -15,14 +15,11 @@ def test_is_valid():
     assert not zign.api.is_valid({'creation_time': now - 3480, 'expires_in': 3600})
 
 
-def test_get_new_token_auth_fail(monkeypatch):
+def test_get_named_token_deprecated(monkeypatch):
     response = MagicMock(status_code=401)
-    monkeypatch.setattr('requests.get', MagicMock(return_value=response))
-    monkeypatch.setattr('stups_cli.config.store_config', lambda x, y: None)
-    with pytest.raises(zign.api.AuthenticationFailed) as excinfo:
-        zign.api.get_named_token('myrealm', ['myscope'], 'myuser', 'mypass', 'http://example.org')
-
-    assert 'Authentication failed: Token Service' in str(excinfo)
+    monkeypatch.setattr('zign.api.get_token', lambda x, y: 'mytok701')
+    token = zign.api.get_named_token('myrealm', ['myscope'], 'myuser', 'mypass', 'http://example.org')
+    assert 'mytok701' == token['access_token']
 
 
 def test_get_new_token_server_error(monkeypatch):
