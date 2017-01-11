@@ -55,17 +55,6 @@ def test_get_token_existing(monkeypatch):
     assert zign.api.get_token('mytok', ['myscope']) == 'tt77'
 
 
-def test_get_token_configuration_error(monkeypatch):
-    def get_token(name):
-        raise tokens.ConfigurationError('TEST')
-
-    monkeypatch.setattr('tokens.get', get_token)
-    monkeypatch.setattr('stups_cli.config.load_config', lambda x: {})
-
-    with pytest.raises(zign.api.ConfigurationError):
-        zign.api.get_token('mytok', ['myscope'])
-
-
 def test_get_token_service_success(monkeypatch):
     monkeypatch.setattr('tokens.get', lambda x: 'svc123')
 
@@ -77,9 +66,7 @@ def test_get_token_fallback_success(monkeypatch):
         raise tokens.ConfigurationError('TEST')
 
     monkeypatch.setattr('tokens.get', get_token)
-    monkeypatch.setattr('stups_cli.config.load_config', lambda x: {'url': 'http://localhost'})
-    monkeypatch.setattr('os.getenv', lambda x: 'mypass')
-    monkeypatch.setattr('zign.api.get_new_token', lambda *args, **kwargs: {'access_token': 'tt77'})
+    monkeypatch.setattr('zign.api.get_token_implicit_flow', lambda *args, **kwargs: {'access_token': 'tt77'})
 
     assert zign.api.get_token('mytok', ['myscope']) == 'tt77'
 
@@ -105,3 +92,20 @@ def test_backwards_compatible_get_config(monkeypatch):
     monkeypatch.setattr('stups_cli.config.load_config', load_config)
     assert {'url': 'http://localhost'} == zign.api.get_config()
     load_config.assert_called_with('zign')
+
+
+def test_token_implicit_flow(monkeypatch):
+
+    def webbrowser_open(url, **kwargs):
+        pass
+
+    server = MagicMock()
+    server.return_value.query_params = {'access_token': 'mytok'}
+
+    load_config = MagicMock()
+    load_config.return_value = {'authorize_url': 'https://localhost/authorize', 'token_url': 'https://localhost/token', 'client_id': 'foobar', 'business_partner_id': '123'}
+    monkeypatch.setattr('stups_cli.config.load_config', load_config)
+    monkeypatch.setattr('zign.api.load_config_ztoken', lambda x: {})
+    monkeypatch.setattr('webbrowser.open', webbrowser_open)
+    monkeypatch.setattr('zign.oauth2.ClientRedirectServer', server)
+    token = zign.api.get_token_implicit_flow('test_token_implicit_flow')
