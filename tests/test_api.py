@@ -91,6 +91,28 @@ def test_backwards_compatible_get_config(monkeypatch):
     load_config.assert_called_with('zign')
 
 
+def test_get_config(monkeypatch):
+    load_config = MagicMock()
+    load_config.return_value = {}
+    store_config = MagicMock()
+    def prompt(message, **kwargs):
+        # just return the prompt text for easy assertion
+        return message
+    monkeypatch.setattr('stups_cli.config.load_config', load_config)
+    monkeypatch.setattr('stups_cli.config.store_config', store_config)
+    monkeypatch.setattr('click.prompt', prompt)
+    monkeypatch.setattr('requests.get', lambda x, timeout: None)
+    config = zign.api.get_config(zign.config.CONFIG_NAME)
+    expected_config = {
+        'authorize_url': 'Please enter the OAuth 2 Authorization Endpoint URL',
+        'business_partner_id': 'Please enter the Business Partner ID',
+        'client_id': 'Please enter the OAuth 2 Client ID',
+        'token_url': 'Please enter the OAuth 2 Token Endpoint URL'
+    }
+    assert config == expected_config
+
+
+
 def test_token_implicit_flow(monkeypatch):
 
     access_token = 'myacctok'
