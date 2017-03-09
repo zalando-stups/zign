@@ -87,7 +87,8 @@ def token(name, authorize_url, client_id, business_partner_id, refresh):
     '''Create a new Platform IAM token or use an existing one.'''
 
     try:
-        token = get_token_implicit_flow(name, authorize_url, client_id, business_partner_id, refresh)
+        token = get_token_implicit_flow(name, authorize_url=authorize_url, client_id=client_id,
+                                        business_partner_id=business_partner_id, refresh=refresh)
     except AuthenticationFailed as e:
         raise click.UsageError(e)
     access_token = token.get('access_token')
