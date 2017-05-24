@@ -30,10 +30,10 @@ def test_token_with_refresh_url(monkeypatch):
     runner = CliRunner()
 
     with runner.isolated_filesystem():
-        result = runner.invoke(cli, ['token', '-n', 'mytok', '--refresh', '-t', 'https://www.example.org/token'],
+        result = runner.invoke(cli, ['token', '-n', 'mytok', '--refresh', '-t', 'https://www.example.org/token', '-a', 'https://www.example.org/auth'],
                                catch_exceptions=False)
 
         assert token == result.output.rstrip().split('\n')[-1]
-        get_token_implicit_flow.assert_called_with('mytok', authorize_url=None,
+        get_token_implicit_flow.assert_called_with('mytok', authorize_url='https://www.example.org/auth',
                                                    token_url='https://www.example.org/token',
                                                    business_partner_id=None, client_id=None, refresh=True)
