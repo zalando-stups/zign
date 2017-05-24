@@ -80,14 +80,16 @@ def delete_token(obj, name):
 @click.option('-n', '--name', help='Custom token name (will be stored)', metavar='TOKEN_NAME')
 @click.option('-a', '--authorize-url', help='OAuth 2 Authorization Endpoint URL to generate access token',
               metavar='AUTH_URL')
+@click.option('-t', '--token-url', help='OAuth 2 Token URL to generate access token using a refresh token',
+              metavar='TOKEN_URL')
 @click.option('-c', '--client-id', help='Client ID to use', metavar='CLIENT_ID')
 @click.option('-p', '--business-partner-id', help='Business Partner ID to use', metavar='PARTNER_ID')
 @click.option('-r', '--refresh', help='Force refresh of the access token', is_flag=True, default=False)
-def token(name, authorize_url, client_id, business_partner_id, refresh):
+def token(name, authorize_url, token_url, client_id, business_partner_id, refresh):
     '''Create a new Platform IAM token or use an existing one.'''
 
     try:
-        token = get_token_implicit_flow(name, authorize_url=authorize_url, client_id=client_id,
+        token = get_token_implicit_flow(name, authorize_url=authorize_url, token_url=token_url, client_id=client_id,
                                         business_partner_id=business_partner_id, refresh=refresh)
     except AuthenticationFailed as e:
         raise click.UsageError(e)

@@ -227,9 +227,15 @@ def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, clien
 
     data = load_config_ztoken(REFRESH_TOKEN_FILE_PATH)
 
-    # Always try with refresh token first
+    # Force prompting for authorize-url and token-url if only one is specified in the parameter list.
+    if authorize_url and not token_url:
+        config['token_url'] = click.prompt('Please enter the OAuth 2 Token Endpoint URL', type=UrlType())
+    elif token_url and not authorize_url:
+        config['authorize_url'] = click.prompt('Please enter the OAuth 2 Authorize Endpoint URL', type=UrlType())
+
+    # Always try with refresh token first, if either authorize_url or token_url aren't specified
     refresh_token = data.get('refresh_token')
-    if refresh_token:
+    if refresh_token and not (authorize_url or token_url):
         payload = {'grant_type':            'refresh_token',
                    'client_id':             config['client_id'],
                    'business_partner_id':   config['business_partner_id'],
@@ -244,8 +250,9 @@ def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, clien
                 token['name'] = name
                 store_token(name, token)
 
-            # Store the latest refresh token
-            store_config_ztoken({'refresh_token': token['refresh_token']}, REFRESH_TOKEN_FILE_PATH)
+            # Store the latest refresh token, but only if using default endpoints
+            if not authorize_url and not token_url:
+                store_config_ztoken({'refresh_token': token['refresh_token']}, REFRESH_TOKEN_FILE_PATH)
             return token
         except RequestException as exception:
             error(exception)
@@ -259,7 +266,8 @@ def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, clien
                  'token_type':      response['token_type'],
                  'scope':           ''}
 
-        if token['refresh_token']:
+        # Refresh token is only stored when the default configuration is used
+        if token['refresh_token'] and not (authorize_url or token_url):
             store_config_ztoken({'refresh_token': token['refresh_token']}, REFRESH_TOKEN_FILE_PATH)
         stups_cli.config.store_config(config, CONFIG_NAME)
 
