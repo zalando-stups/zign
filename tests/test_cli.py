@@ -16,4 +16,5 @@ def test_token(monkeypatch):
         result = runner.invoke(cli, ['token', '-n', 'mytok', '--refresh'], catch_exceptions=False)
 
         assert token == result.output.rstrip().split('\n')[-1]
-        get_token_implicit_flow.assert_called_with('mytok', authorize_url=None, business_partner_id=None, client_id=None, refresh=True)
+        get_token_implicit_flow.assert_called_with('mytok', authorize_url=None, token_url=None,
+                                                   business_partner_id=None, client_id=None, refresh=True)
