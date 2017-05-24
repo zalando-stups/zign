@@ -59,7 +59,6 @@ def get_config(config_module=None, override=None):
     # Make sure no keys with empty values are present
     override = {k: v for (k, v) in override.items() if v}
     config = stups_cli.config.load_config(config_module)
-    old_config = config.copy()
 
     for oauth2_url, message in {'authorize_url': 'Authorization', 'token_url': 'Token'}.items():
         while oauth2_url not in override and oauth2_url not in config:
