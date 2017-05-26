@@ -7,7 +7,13 @@ from zign.cli_zign import cli_zign
 def test_create_list_delete(monkeypatch):
     token = 'abc-123'
 
-    monkeypatch.setattr('zign.api.perform_implicit_flow', lambda a: {'access_token': token, 'expires_in': 1, 'token_type': 'test'})
+    perform_implicit_flow = MagicMock()
+    perform_implicit_flow.return_value = {'access_token': token, 'expires_in': 1, 'token_type': 'test'}
+    monkeypatch.setattr('zign.api.perform_implicit_flow', perform_implicit_flow)
+
+    load_config = MagicMock()
+    load_config.return_value = {'authorize_url': 'https://localhost/authorize', 'token_url': 'https://localhost/token', 'client_id': 'foobar', 'business_partner_id': '123'}
+    monkeypatch.setattr('stups_cli.config.load_config', load_config)
 
     runner = CliRunner()
 
