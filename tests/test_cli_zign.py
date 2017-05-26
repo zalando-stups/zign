@@ -18,7 +18,7 @@ def test_create_list_delete(monkeypatch):
 
         assert token == result.output.rstrip().split('\n')[-1]
 
-#        result = runner.invoke(cli_zign, ['list', '-o', 'json'], catch_exceptions=False)
+        result = runner.invoke(cli_zign, ['list', '-o', 'json'], catch_exceptions=False)
 #        data = json.loads(result.output)
 #        assert len(data) >= 1
 #        assert 'mytok' in [r['name'] for r in data]
