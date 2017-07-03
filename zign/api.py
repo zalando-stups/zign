@@ -156,7 +156,7 @@ def perform_implicit_flow(config: dict):
 
     while True:
         try:
-            httpd = ClientRedirectServer(('localhost', port_number))
+            httpd = ClientRedirectServer(('127.0.0.1', port_number))
         except socket.error as e:
             if port_number > max_port_number:
                 success = False
