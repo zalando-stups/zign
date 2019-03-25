@@ -1,6 +1,7 @@
 import logging
 import os
 import socket
+import tempfile
 import time
 import webbrowser
 from urllib.parse import urlparse, urlunsplit
@@ -142,8 +143,16 @@ def store_config_ztoken(data: dict, path: str):
     if dir_path:
         os.makedirs(dir_path, exist_ok=True)
 
-    with open(path, 'w') as fd:
-        yaml.safe_dump(data, fd)
+    new_fp, new_file = tempfile.mkstemp(prefix=os.path.basename(path), dir=dir_path)
+    try:
+        with open(new_fp, mode="w", closefd=True) as fd:
+            yaml.safe_dump(data, fd)
+            fd.flush()
+    except Exception:
+        os.unlink(new_file)
+        raise
+    else:
+        os.rename(new_file, path)
 
 
 def perform_implicit_flow(config: dict):
