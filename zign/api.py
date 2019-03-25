@@ -4,6 +4,7 @@ import socket
 import tempfile
 import time
 import webbrowser
+from contextlib import contextmanager
 from urllib.parse import urlparse, urlunsplit
 
 import click
@@ -213,6 +214,21 @@ def perform_implicit_flow(config: dict):
     return httpd.query_params
 
 
+@contextmanager
+def locked_config():
+    try:
+        import fcntl
+    except ImportError:
+        # fcntl not available on Windows, someone else could implement it
+        yield
+    else:
+        config_path = stups_cli.config.get_path(CONFIG_NAME)
+        lock_file = os.path.join(os.path.dirname(config_path), ".{}.lock".format(os.path.basename(config_path)))
+        with open(lock_file, "a") as f:
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            yield
+
+
 def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, client_id=None, business_partner_id=None,
                             refresh=False):
     '''Gets a Platform IAM access token using browser redirect flow'''
@@ -228,59 +244,60 @@ def get_token_implicit_flow(name=None, authorize_url=None, token_url=None, clien
                 'token_url':            token_url,
                 'client_id':            client_id,
                 'business_partner_id':  business_partner_id}
-    config = get_config(CONFIG_NAME, override=override)
+    with locked_config():
+        config = get_config(CONFIG_NAME, override=override)
 
-    data = load_config_ztoken(REFRESH_TOKEN_FILE_PATH)
+        data = load_config_ztoken(REFRESH_TOKEN_FILE_PATH)
 
-    # Force prompting for authorize-url and token-url if only one is specified in the parameter list.
-    if authorize_url and not token_url:
-        config['token_url'] = click.prompt('Please enter the OAuth 2 Token Endpoint URL', type=UrlType())
-    elif token_url and not authorize_url:
-        config['authorize_url'] = click.prompt('Please enter the OAuth 2 Authorize Endpoint URL', type=UrlType())
+        # Force prompting for authorize-url and token-url if only one is specified in the parameter list.
+        if authorize_url and not token_url:
+            config['token_url'] = click.prompt('Please enter the OAuth 2 Token Endpoint URL', type=UrlType())
+        elif token_url and not authorize_url:
+            config['authorize_url'] = click.prompt('Please enter the OAuth 2 Authorize Endpoint URL', type=UrlType())
 
-    use_refresh = not (authorize_url or token_url)
-    # Refresh token will be used if authorize_url or token_url aren't specified
+        use_refresh = not (authorize_url or token_url)
+        # Refresh token will be used if authorize_url or token_url aren't specified
 
-    refresh_token = data.get('refresh_token')
-    if refresh_token and use_refresh:
-        payload = {'grant_type':            'refresh_token',
-                   'client_id':             config['client_id'],
-                   'business_partner_id':   config['business_partner_id'],
-                   'refresh_token':         refresh_token}
-        try:
-            r = requests.post(config['token_url'], timeout=20, data=payload)
-            r.raise_for_status()
+        refresh_token = data.get('refresh_token')
+        if refresh_token and use_refresh:
+            payload = {'grant_type':            'refresh_token',
+                       'client_id':             config['client_id'],
+                       'business_partner_id':   config['business_partner_id'],
+                       'refresh_token':         refresh_token}
+            try:
+                r = requests.post(config['token_url'], timeout=20, data=payload)
+                r.raise_for_status()
 
-            token = r.json()
-            token['scope'] = ''
+                token = r.json()
+                token['scope'] = ''
+                if name:
+                    token['name'] = name
+                    store_token(name, token)
+
+                store_config_ztoken({'refresh_token': token['refresh_token']}, REFRESH_TOKEN_FILE_PATH)
+                return token
+            except RequestException as exception:
+                error(exception)
+
+        response = perform_implicit_flow(config)
+
+        if 'access_token' in response:
+            token = {'access_token':    response['access_token'],
+                     'refresh_token':   response.get('refresh_token'),
+                     'expires_in':      int(response['expires_in']),
+                     'token_type':      response['token_type'],
+                     'scope':           ''}
+
+            # Refresh token is only stored when the default configuration is used
+            if token['refresh_token'] and use_refresh:
+                store_config_ztoken({'refresh_token': token['refresh_token']}, REFRESH_TOKEN_FILE_PATH)
+
             if name:
                 token['name'] = name
                 store_token(name, token)
-
-            store_config_ztoken({'refresh_token': token['refresh_token']}, REFRESH_TOKEN_FILE_PATH)
             return token
-        except RequestException as exception:
-            error(exception)
-
-    response = perform_implicit_flow(config)
-
-    if 'access_token' in response:
-        token = {'access_token':    response['access_token'],
-                 'refresh_token':   response.get('refresh_token'),
-                 'expires_in':      int(response['expires_in']),
-                 'token_type':      response['token_type'],
-                 'scope':           ''}
-
-        # Refresh token is only stored when the default configuration is used
-        if token['refresh_token'] and use_refresh:
-            store_config_ztoken({'refresh_token': token['refresh_token']}, REFRESH_TOKEN_FILE_PATH)
-
-        if name:
-            token['name'] = name
-            store_token(name, token)
-        return token
-    else:
-        raise AuthenticationFailed('Failed to retrieve token')
+        else:
+            raise AuthenticationFailed('Failed to retrieve token')
 
 
 def get_named_token(scope, realm, name, user, password, url=None,
