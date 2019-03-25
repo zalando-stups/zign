@@ -223,6 +223,7 @@ def locked_config():
         yield
     else:
         config_path = stups_cli.config.get_path(CONFIG_NAME)
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
         lock_file = os.path.join(os.path.dirname(config_path), ".{}.lock".format(os.path.basename(config_path)))
         with open(lock_file, "a") as f:
             fcntl.flock(f.fileno(), fcntl.LOCK_EX)
