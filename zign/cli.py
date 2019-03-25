@@ -69,7 +69,7 @@ def delete_token(obj, name):
 
     try:
         del data[name]
-    except:
+    except Exception:
         pass
 
     with open(TOKENS_FILE_PATH, 'w') as fd:
