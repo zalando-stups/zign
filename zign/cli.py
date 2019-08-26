@@ -67,10 +67,8 @@ def delete_token(obj, name):
     '''Delete a named token'''
     data = get_tokens()
 
-    try:
+    if data and name in data:
         del data[name]
-    except:
-        pass
 
     with open(TOKENS_FILE_PATH, 'w') as fd:
         yaml.safe_dump(data, fd)

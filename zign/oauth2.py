@@ -118,5 +118,8 @@ class ClientRedirectServer(HTTPServer):
     """
     query_params = {}
 
+    # Raise an error if the provided address is already in use
+    allow_reuse_address = False
+
     def __init__(self, address):
         super().__init__(address, ClientRedirectHandler)

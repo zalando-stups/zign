@@ -83,7 +83,7 @@ class PyTest(TestCommand):
     def run_tests(self):
         try:
             import pytest
-        except:
+        except ImportError:
             raise RuntimeError('py.test is not installed, run: pip install pytest')
         params = {'args': self.test_args}
         if self.cov:
