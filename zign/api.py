@@ -89,7 +89,7 @@ def load_config_ztoken(config_file: str):
     try:
         with open(config_file) as fd:
             data = yaml.safe_load(fd)
-    except:
+    except FileNotFoundError:
         data = None
     return data or {}
 
@@ -112,7 +112,7 @@ def get_new_token(realm: str, scope: list, user, password, url=None, insecure=Fa
         raise ServerError('Token Service returned HTTP status {}: {}'.format(response.status_code, response.text))
     try:
         json_data = response.json()
-    except:
+    except:  # noqa: E731,E123
         raise ServerError('Token Service returned invalid JSON data')
 
     if not json_data.get('access_token'):
@@ -157,7 +157,7 @@ def perform_implicit_flow(config: dict):
     while True:
         try:
             httpd = ClientRedirectServer(('127.0.0.1', port_number))
-        except socket.error as e:
+        except socket.error:
             if port_number > max_port_number:
                 success = False
                 break
