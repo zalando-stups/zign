@@ -31,7 +31,7 @@ def test_get_new_token_server_error(monkeypatch):
     with pytest.raises(zign.api.ServerError) as excinfo:
         zign.api.get_new_token('myrealm', ['myscope'], 'myuser', 'mypass', 'http://example.org')
 
-    assert 'Server error: Token Service returned HTTP status 500' in str(excinfo)
+    assert 'Server error: Token Service returned HTTP status 500' in str(excinfo.value)
 
 
 def test_get_new_token_invalid_json(monkeypatch):
